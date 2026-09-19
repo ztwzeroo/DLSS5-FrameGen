@@ -9,7 +9,7 @@ from .fetch import verify_kit
 from .gpu import SUPPORTED, detect_gpu
 from .ini import build_ini
 from .manifest import MANIFEST_DIR, Manifest
-from .proxy_select import choose_proxy
+from .proxy_select import PROXY_CANDIDATES, choose_proxy
 from .scan import scan_game_dir
 
 INI_NAME = "dlssg_sm86.ini"
@@ -83,7 +83,10 @@ def install(
         )
 
     # 4. 备份并移除我们自己的旧文件（重装/升级路径）
+    #    不变量：只允许删代理候选名与 ini——manifest 是可被外部编辑的数据，
+    #    绝不据其触碰其他路径。
     backup_dir = game_dir / MANIFEST_DIR / "backups"
+    deletable = set(PROXY_CANDIDATES) | {INI_NAME}
     new_manifest = Manifest(
         dlss_combo_version=__version__,
         dlssg={
@@ -95,15 +98,24 @@ def install(
         },
     )
     created: list[Path] = []
+    deleted: list[tuple[Path, Path]] = []  # (原路径, 备份路径)
     try:
         if old_manifest is not None:
             for entry in old_manifest.files:
+                if entry["path"] not in deletable:
+                    warnings.append(
+                        f"manifest 中列出的非代理路径已跳过、未触碰: {entry['path']}"
+                    )
+                    continue
                 p = game_dir / entry["path"]
                 if p.is_file():
                     backup_dir.mkdir(parents=True, exist_ok=True)
                     saved = backup_dir / f"{entry['path']}.bak"
                     shutil.copy2(p, saved)
-                    new_manifest.record_backup(entry["path"], str(saved.relative_to(game_dir)))
+                    deleted.append((p, saved))
+                    new_manifest.record_backup(
+                        entry["path"], str(saved.relative_to(game_dir))
+                    )
                 p.unlink(missing_ok=True)
 
         # 5. 写入 ini 与所选代理
@@ -121,6 +133,9 @@ def install(
     except Exception:
         for p in created:
             p.unlink(missing_ok=True)
+        for original, backup in deleted:
+            if not original.exists():
+                shutil.copy2(backup, original)
         raise
 
     # 6. 验证 + 画质层状态 + 指引
