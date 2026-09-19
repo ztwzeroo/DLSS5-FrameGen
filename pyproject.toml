@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "dlss-combo"
+version = "0.1.0"
+description = "Combine DLSS 5 neural rendering (DLSS5-Swapper) with DLSS Frame Generation (dlssg_for_sm86) on RTX 20/30"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+
+[project.scripts]
+dlss-combo = "dlss_combo.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
