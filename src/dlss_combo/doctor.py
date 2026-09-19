@@ -46,9 +46,12 @@ def doctor(game_dir: Path) -> DoctorReport:
     rep = DoctorReport()
     log_dir = game_dir / "dlssg_sm86" / "logs"
 
-    # 1. 插帧路由是否生效（backend 日志）
+    # 1. 插帧路由是否生效（backend 日志；多份时以最新修改的为准）
     if log_dir.is_dir():
-        for log in sorted(log_dir.glob("backend_*.jsonl")):
+        logs = sorted(
+            log_dir.glob("backend_*.jsonl"), key=lambda p: p.stat().st_mtime
+        )
+        for log in logs:
             result = _parse_route_active(log.read_text(encoding="utf-8", errors="replace"))
             if result is not None:
                 rep.route_active = result

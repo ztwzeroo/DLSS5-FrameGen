@@ -186,3 +186,31 @@ def fetch_swapper(
         json.dumps(existing, ensure_ascii=False, indent=2), encoding="utf-8"
     )
     return SwapperInfo(tag=release.get("tag_name", ""), zip_path=zip_path)
+
+
+def launch_swapper(
+    kit_dir: Path,
+    spawn: Callable[[Path], None] | None = None,
+) -> Path:
+    """拉起 kit 里的 DLSS5-Swapper portable；kit 无该组件时抛 FileNotFoundError。"""
+    meta = _load_meta(kit_dir)
+    rel = meta.get("swapper", {}).get("zip")
+    if not rel:
+        raise FileNotFoundError("kit 中没有 DLSS5-Swapper（先运行 dlss-combo fetch）")
+    exe = kit_dir / rel
+    if not exe.is_file():
+        raise FileNotFoundError(f"DLSS5-Swapper 不在 kit 中: {exe}")
+    (spawn or _default_spawn)(exe)
+    return exe
+
+
+def _default_spawn(exe: Path) -> None:
+    import os
+    import platform
+
+    if platform.system() == "Windows":
+        os.startfile(str(exe))  # noqa: S606 - Windows 惯例拉起 GUI
+    else:
+        import subprocess
+
+        subprocess.Popen([str(exe)], start_new_session=True)

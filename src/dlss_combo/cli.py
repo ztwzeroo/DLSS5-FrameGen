@@ -31,6 +31,8 @@ def _build_parser() -> argparse.ArgumentParser:
     pi.add_argument("--arch", help="显式指定架构 sm75/sm86（探测失败或需覆盖时用）")
     pi.add_argument("--allow-dxgi", action="store_true",
                     help="允许占用 dxgi.dll 代理名（ReShade/OptiScaler 常用，慎选）")
+    pi.add_argument("--launch-swapper", action="store_true",
+                    help="安装后自动拉起 kit 中的 DLSS5-Swapper portable（画质层）")
 
     pu = sub.add_parser("uninstall", help="按 manifest 还原安装前状态")
     pu.add_argument("game_dir", type=Path)
@@ -60,6 +62,7 @@ def main(argv: list[str] | None = None) -> int:
             return 0
 
         if args.command == "install":
+            from .fetch import launch_swapper
             from .install import install
 
             result = install(
@@ -77,6 +80,13 @@ def main(argv: list[str] | None = None) -> int:
                 print(f"[警告] {line}")
             for line in result.guidance:
                 print(f"[指引] {line}")
+            if result.ok and args.launch_swapper:
+                try:
+                    exe = launch_swapper(args.kit_dir)
+                    print(f"[动作] 已拉起 DLSS5-Swapper: {exe.name}")
+                    print("[指引] 在 Swapper 里给本游戏装好 DLSS 5 后，回来跑 doctor 复检")
+                except FileNotFoundError as e:
+                    print(f"[警告] {e}", file=sys.stderr)
             return 0 if result.ok else 1
 
         if args.command == "uninstall":

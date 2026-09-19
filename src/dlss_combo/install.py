@@ -6,7 +6,7 @@ from pathlib import Path
 
 from . import __version__
 from .fetch import verify_kit
-from .gpu import SUPPORTED, detect_gpu
+from .gpu import SUPPORTED, detect_gpu, driver_meets_minimum
 from .ini import build_ini
 from .manifest import MANIFEST_DIR, Manifest
 from .proxy_select import PROXY_CANDIDATES, choose_proxy
@@ -59,6 +59,11 @@ def install(
     warnings: list[str] = []
     if gpu.arch is None:
         warnings.append("无法确认 GPU 架构（无 nvidia-smi？）——已继续，请自行确认是 RTX 20/30")
+    if driver_meets_minimum(gpu.driver_version) is False:
+        warnings.append(
+            f"驱动 {gpu.driver_version} 低于 R580：DLSS-G 内核将走 PTX JIT 回退"
+            "（首帧慢）甚至不可用，建议升级 NVIDIA 驱动"
+        )
 
     # 2. kit 校验（缺文件/哈希不符 → 拒绝安装）
     problems = verify_kit(kit_dir, runtime=runtime)
