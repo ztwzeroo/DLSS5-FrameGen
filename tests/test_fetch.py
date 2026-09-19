@@ -19,9 +19,10 @@ FILES_3109 = {
 
 def make_fetch(files: dict[str, bytes]):
     def fetch_bytes(url: str) -> bytes:
-        for key, blob in files.items():
+        # 最长键优先，避免 "version.dll" 抢匹配 "310.1/version.dll"
+        for key in sorted(files, key=len, reverse=True):
             if url.endswith(key):
-                return blob
+                return files[key]
         raise RuntimeError(f"unexpected url {url}")
 
     return fetch_bytes
