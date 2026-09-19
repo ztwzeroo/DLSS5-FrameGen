@@ -63,7 +63,10 @@ def doctor(game_dir: Path) -> DoctorReport:
     # 2. 代理冲突
     proxies = sorted(scan.existing_proxies)
     if len(proxies) > 1:
-        rep.lines.append(f"注意: 多个代理并存 {proxies}——首个被游戏加载者生效，其余只转发，建议只留一个")
+        rep.lines.append(
+            f"注意: 多个代理 DLL 并存 {proxies}——按上游说明首个被游戏加载者生效、"
+            "其余仅转发；ReShade/画质层的 dxgi.dll 与插帧代理并存属预期，异常时再精简"
+        )
     foreign = [n for n, k in scan.existing_proxies.items() if k == "foreign"]
     if manifest is None and foreign:
         rep.lines.append(f"注意: {foreign} 非本工具安装（无 manifest）——如有异常先排查这些 DLL")
