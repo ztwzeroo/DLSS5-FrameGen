@@ -113,3 +113,76 @@ def verify_kit(kit_dir: Path, runtime: str = "310.9") -> list[str]:
         elif kit_rel in recorded and Manifest.sha256_of(p) != recorded[kit_rel]:
             problems.append(f"hash mismatch: {kit_rel}")
     return problems
+
+
+SWAPPER_REPO = "rakanki911/DLSS5-Swapper"
+SWAPPER_API = f"https://api.github.com/repos/{SWAPPER_REPO}/releases/latest"
+
+
+@dataclass
+class SwapperInfo:
+    tag: str
+    zip_path: Path
+
+
+def fetch_swapper(
+    kit_dir: Path,
+    refresh: bool = False,
+    fetch_bytes: Callable[[str], bytes] | None = None,
+) -> SwapperInfo:
+    """下载 DLSS5-Swapper 最新 portable 包并用官方 SHA256SUMS 校验，缓存于 kit/swapper/。"""
+    fetch_bytes = fetch_bytes or _default_fetch
+    swapper_dir = kit_dir / "swapper"
+    meta = _load_meta(kit_dir)
+    cached = meta.get("swapper", {})
+    if not refresh and cached.get("zip"):
+        z = kit_dir / cached["zip"]
+        if z.is_file():
+            return SwapperInfo(tag=cached.get("tag", ""), zip_path=z)
+
+    release = json.loads(fetch_bytes(SWAPPER_API).decode("utf-8"))
+    assets = {a["name"]: a["browser_download_url"] for a in release.get("assets", [])}
+    # 上游实际发布 *.portable.exe（也有过 .zip 的可能）；Setup 安装器不是我们要的
+    portable_name = next(
+        (n for n in assets
+         if "portable" in n.lower() and n.lower().endswith((".zip", ".exe"))),
+        None,
+    )
+    if portable_name is None:
+        raise RuntimeError(f"no portable asset in {SWAPPER_REPO} latest release")
+
+    zip_bytes = fetch_bytes(assets[portable_name])
+    actual_sha = hashlib.sha256(zip_bytes).hexdigest()
+    sums_name = next((n for n in assets if "sha256" in n.lower()), None)
+    checksum_source = "self"  # 上游不总提供校验文件；默认自记哈希
+    if sums_name is not None:
+        expected: str | None = None
+        for line in fetch_bytes(assets[sums_name]).decode("utf-8").splitlines():
+            parts = line.split(None, 1)
+            if len(parts) == 2 and parts[1].strip() == portable_name:
+                expected = parts[0].strip().lower()
+                break
+        if expected is None:
+            raise RuntimeError(f"checksum file has no entry for {portable_name}")
+        if actual_sha != expected:
+            raise RuntimeError(f"checksum mismatch for {portable_name}: {actual_sha} != {expected}")
+        checksum_source = "upstream"
+
+    swapper_dir.mkdir(parents=True, exist_ok=True)
+    zip_path = swapper_dir / portable_name
+    zip_path.write_bytes(zip_bytes)
+
+    meta["swapper"] = {
+        "tag": release.get("tag_name", ""),
+        "zip": str(zip_path.relative_to(kit_dir)),
+        "sha256": actual_sha,
+        "checksum_source": checksum_source,
+    }
+    existing = _load_meta(kit_dir)
+    existing["swapper"] = meta["swapper"]
+    if existing.get("version") is None:
+        existing["version"] = 1
+    (kit_dir / KIT_JSON).write_text(
+        json.dumps(existing, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
+    return SwapperInfo(tag=release.get("tag_name", ""), zip_path=zip_path)

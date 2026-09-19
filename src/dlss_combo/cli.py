@@ -47,10 +47,16 @@ def main(argv: list[str] | None = None) -> int:
         return e.code if isinstance(e.code, int) else 2
     try:
         if args.command == "fetch":
-            from .fetch import fetch_kit
+            from .fetch import fetch_kit, fetch_swapper
 
             kit = fetch_kit(args.kit_dir, runtime=args.runtime, refresh=args.refresh)
-            print(f"kit 就绪: {kit.root} (commit {kit.dlssg_commit})")
+            print(f"dlssg kit 就绪: {kit.root} (commit {kit.dlssg_commit})")
+            try:
+                sw = fetch_swapper(args.kit_dir, refresh=args.refresh)
+                print(f"DLSS5-Swapper portable 就绪: {sw.zip_path} ({sw.tag})")
+            except Exception as e:
+                print(f"[警告] DLSS5-Swapper 下载失败（可用图形界面手动下载）: {e}",
+                      file=sys.stderr)
             return 0
 
         if args.command == "install":
