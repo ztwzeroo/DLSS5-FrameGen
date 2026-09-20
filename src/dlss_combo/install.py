@@ -184,8 +184,22 @@ def install(
                 )
 
         # 5. 原子落盘
-        _atomic_write_text(ini_path, build_ini(tier=tier, mfg=mfg))
-        created.append(ini_path)
+        # INI 被外部修改（或曾被外部修改并标记）→ 保留用户版本，不再写入
+        ini_user_managed = INI_NAME in externally_modified or bool(
+            old_manifest and old_manifest.dlssg.get("ini_user_managed")
+        )
+        if ini_user_managed and ini_path.is_file():
+            warnings.append(
+                "dlssg_sm86.ini 已被外部修改：保留你的版本，本次 tier/mfg 未写入"
+                "（删除该文件后重装可恢复本工具管理）"
+            )
+            new_manifest.dlssg["ini_user_managed"] = True
+        else:
+            _atomic_write_text(ini_path, build_ini(tier=tier, mfg=mfg))
+            created.append(ini_path)
+            new_manifest.record_file(
+                INI_NAME, new_manifest.sha256_of(ini_path), origin="kit"
+            )
         src = (
             kit_root / "version.dll"
             if choice.source == "root"
@@ -194,9 +208,6 @@ def install(
         dst = game_dir / choice.name
         _atomic_copy(src, dst)
         created.append(dst)
-        new_manifest.record_file(
-            INI_NAME, new_manifest.sha256_of(ini_path), origin="kit"
-        )
         new_manifest.record_file(choice.name, new_manifest.sha256_of(dst), origin="kit")
         new_manifest.save(game_dir)
     except Exception:
@@ -218,8 +229,11 @@ def install(
     # 6. 验证 + 画质层状态 + 指引
     actions = [
         f"已安装代理: {choice.name} (来源 {choice.source}, runtime {runtime}, commit {new_manifest.dlssg['commit']})",
-        f"已写入 {INI_NAME} (tier={tier}, mfg={mfg})",
     ]
+    if new_manifest.dlssg.get("ini_user_managed"):
+        actions.append("保留用户修改的 dlssg_sm86.ini（未写入本工具配置）")
+    else:
+        actions.append(f"已写入 {INI_NAME} (tier={tier}, mfg={mfg})")
     guidance = []
     if scan.reshade or scan.renodx or scan.feeder:
         guidance.append(

@@ -37,8 +37,11 @@ def test_uninstall_restores_backup_of_foreign_file(tmp_path: Path, kit: Path):
         {"original": "version.dll", "saved_to": ".dlss-combo/backups/version.dll.bak"}
     ]
     m_path.write_text(json.dumps(data))
-    uninstall(game)
-    assert (game / "version.dll").read_bytes() == b"orig-restored"
+    actions = uninstall(game)
+    # 新语义（发布验收 P1）：在场的外部文件不被覆盖，原配置另存副本
+    assert (game / "version.dll").read_bytes() == b"orig"
+    assert (game / "version.dll.pre-existing").read_bytes() == b"orig-restored"
+    assert any("pre-existing" in a for a in actions)
 
 
 def test_uninstall_after_reinstall_leaves_no_stale_proxy(game: Path, kit: Path):
