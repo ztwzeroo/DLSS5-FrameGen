@@ -44,9 +44,11 @@ The image layer is still configured in **DLSS5-Swapper's own interface**. Render
 
 ```mermaid
 flowchart LR
-    A["Download upstream components"] --> B["Image layer<br/>Configure in DLSS5-Swapper"]
-    B --> C["Frame generation<br/>Install with dlss-combo"]
-    C --> D["Test your game<br/>Inspect logs and report"]
+    A["01 · FETCH<br/>Components"] --> B["02 · CONFIGURE<br/>Image layer"]
+    B --> C["03 · INSTALL<br/>Frame generation"]
+    C --> D["04 · TEST<br/>Game + logs"]
+    classDef step fill:#172118,color:#eef4e5,stroke:#718e53,stroke-width:1px
+    class A,B,C,D step
 ```
 
 *Setup workflow only. This diagram is not a gameplay demonstration or performance result.*
