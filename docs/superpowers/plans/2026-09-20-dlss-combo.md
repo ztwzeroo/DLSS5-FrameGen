@@ -41,7 +41,7 @@ def test_package_importable_with_version():
 
 - [ ] **Step 2: 运行确认失败**
 
-Run: `cd /Users/ztwzero/Documents/dlss && python3 -m pytest tests/test_scaffold.py -v`
+Run: `python3 -m pytest tests/test_scaffold.py -v`
 Expected: FAIL（ModuleNotFoundError）
 
 - [ ] **Step 3: 最小实现**
