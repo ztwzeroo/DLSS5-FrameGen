@@ -31,6 +31,9 @@ def _build_parser() -> argparse.ArgumentParser:
     pi.add_argument("--arch", help="显式指定架构 sm75/sm86（探测失败或需覆盖时用）")
     pi.add_argument("--allow-dxgi", action="store_true",
                     help="允许占用 dxgi.dll 代理名（ReShade/OptiScaler 常用，慎选）")
+    pi.add_argument("--proxy", choices=[
+        "version.dll", "winmm.dll", "dbghelp.dll", "dinput8.dll", "d3d12.dll", "dxgi.dll",
+    ], help="显式指定代理 DLL 名（默认按上游推荐顺序取空闲位）")
     pi.add_argument("--launch-swapper", action="store_true",
                     help="安装后自动拉起 kit 中的 DLSS5-Swapper portable（画质层）")
 
@@ -73,6 +76,7 @@ def main(argv: list[str] | None = None) -> int:
                 runtime=args.runtime,
                 arch=args.arch,
                 allow_dxgi=args.allow_dxgi,
+                proxy=args.proxy,
             )
             for line in result.actions:
                 print(f"[动作] {line}")
@@ -105,7 +109,7 @@ def main(argv: list[str] | None = None) -> int:
             report = doctor(args.game_dir)
             for line in report.lines:
                 print(line)
-            return 0
+            return 1 if report.has_problems else 0
 
     except FileNotFoundError as e:
         print(f"错误: {e}", file=sys.stderr)

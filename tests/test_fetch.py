@@ -33,7 +33,7 @@ def test_fetch_writes_kit_and_json(tmp_path: Path):
     assert (kit.root / "version.dll").read_bytes() == b"dll3109"
     assert kit.dlssg_commit == "abc1234"
     meta = json.loads((tmp_path / "kit.json").read_text())
-    assert meta["dlssg_commit"] == "abc1234"
+    assert meta["dlssg_commits"] == {"310.9": "abc1234"}
     assert len(meta["files"]) == 7
 
 

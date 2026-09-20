@@ -53,8 +53,10 @@ def test_launch_swapper_uses_kit_exe(tmp_path: Path):
     exe = tmp_path / "swapper" / "DLSS5-Swapper-portable.exe"
     exe.parent.mkdir(parents=True)
     exe.write_bytes(b"MZ")
+    import hashlib as _h
     (tmp_path / "kit.json").write_text(
-        json.dumps({"swapper": {"zip": "swapper/DLSS5-Swapper-portable.exe"}})
+        json.dumps({"swapper": {"zip": "swapper/DLSS5-Swapper-portable.exe",
+                                 "sha256": _h.sha256(b"MZ").hexdigest()}})
     )
     seen: list[Path] = []
     result = launch_swapper(tmp_path, spawn=seen.append)

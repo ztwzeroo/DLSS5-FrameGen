@@ -1,197 +1,145 @@
-<p align="center">
-  <img src="assets/hero.svg" alt="DLSS5-FrameGen: DLSS 5 meets Frame Generation. Experimental community toolkit targeting RTX 20 and RTX 30." width="100%">
-</p>
+<div align="center">
 
-<p align="center">
-  <strong>English</strong> · <a href="README.zh-CN.md">简体中文</a>
-</p>
+# DLSS5-FrameGen
 
-# DLSS 5 + Frame Generation for RTX 20/30
+### DLSS 5 + 插帧，让 RTX 20/30 探索更多可能
+### DLSS 5 + Frame Generation for RTX 20/30
 
-**Explore DLSS 5 and frame generation together, with a shared setup workflow.** DLSS5-FrameGen connects [DLSS5-Swapper](https://github.com/rakanki911/DLSS5-Swapper) and [dlssg_for_sm86](https://github.com/sdli1995/dlssg_for_sm86): download components, configure the frame-generation layer, and inspect the resulting logs.
+**A community toolkit combining DLSS5-Swapper and dlssg_for_sm86.**
+**把 DLSS 5 画质工具与 DLSS 帧生成整合到一个工作流。**
 
-[![Stage: Developer preview](https://img.shields.io/badge/stage-developer_preview-e8b35a?style=flat-square)](docs/STATUS.md)
-[![Target: Windows](https://img.shields.io/badge/target-Windows_10%2F11-334234?style=flat-square)](#will-it-work-with-my-setup)
-[![GPU: RTX 20 / 30](https://img.shields.io/badge/GPU-RTX_20_%2F_30-5b713b?style=flat-square)](#will-it-work-with-my-setup)
-[![License: MIT](https://img.shields.io/badge/license-MIT-334234?style=flat-square)](LICENSE)
+[![Status: Experimental](https://img.shields.io/badge/status-experimental-orange)](#project-status--项目状态)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue)](https://www.python.org/downloads/)
+[![Target: Windows](https://img.shields.io/badge/target-Windows-0078D6)](#requirements--运行条件)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
-> **Developer preview.** Best suited to contributors and experienced modders using disposable test copies. Known file-safety, rollback and checksum issues remain. This project has no verified in-game benchmarks yet. **Read the [current limitations](docs/STATUS.md) before installing.**
+[How it works / 工作原理](#how-it-works--工作原理) · [Getting started / 开始使用](#getting-started--开始使用) · [Known issues / 已知问题](docs/reviews/2026-09-20-project-review.md) · [Report results / 反馈实测](https://github.com/ztwzeroo/DLSS5-FrameGen/issues)
 
-<p>
-  <a href="https://github.com/ztwzeroo/DLSS5-FrameGen/archive/refs/heads/main.zip"><img src="https://img.shields.io/badge/Download-source_ZIP-d3ff6a?style=for-the-badge&amp;labelColor=263021" alt="Download source ZIP"></a>
-  <a href="#get-started"><img src="https://img.shields.io/badge/Read-setup_guide-354a30?style=for-the-badge&amp;labelColor=263021" alt="Read setup guide"></a>
-  <a href="https://github.com/ztwzeroo/DLSS5-FrameGen/issues/new?template=game-test.yml"><img src="https://img.shields.io/badge/Share-a_game_test-354a30?style=for-the-badge&amp;labelColor=263021" alt="Share a game test"></a>
-</p>
+</div>
 
-[Compatibility](#will-it-work-with-my-setup) · [FAQ](#frequently-asked-questions) · [Known issues](docs/STATUS.md) · [Contribute](CONTRIBUTING.md)
+## Project status / 项目状态
 
-*Source download only. Python 3.10+ required; no standalone installer or bundled upstream DLLs.*
+> **Experimental developer preview — not a stable installer.**
+> **实验性开发预览，尚非稳定安装器。**
+>
+> 81 offline tests pass, and the Python wheel builds successfully. Windows/NVIDIA game testing, image quality, FPS gains and combined compatibility have **not yet been validated by this project**.
+>
+> 已通过 81 个离线测试与 Python 包构建检查；本项目尚未完成 Windows/NVIDIA 游戏实测，画质、帧率提升和组合稳定性均待验证。
+>
+> The [project audit](docs/reviews/2026-09-20-project-review.md) identifies unresolved file deletion, backup/restore and checksum issues. Use disposable test directories or separately backed-up game copies. Do not rely on this version's uninstall command as your only recovery method.
+>
+> [项目审查](docs/reviews/2026-09-20-project-review.md)发现尚未修复的文件删除、备份还原和哈希校验问题。当前请使用可丢弃的测试目录或独立备份的游戏副本，不要把本版本的卸载功能作为唯一恢复手段。
 
-## Why this project?
+## How it works / 工作原理
 
-Setting up two graphics mods means managing two layers of files, configuration and troubleshooting. This project brings the coordination into one small, open-source CLI.
+| Layer / 层 | Upstream project / 上游项目 | Role / 作用 |
+|---|---|---|
+| Image / 画质 | [DLSS5-Swapper](https://github.com/rakanki911/DLSS5-Swapper) | Manages DLSS 5 installation routes, including ReShade/Feeder and RenoDX / 管理 DLSS 5 画质层安装路线 |
+| Frames / 插帧 | [dlssg_for_sm86](https://github.com/sdli1995/dlssg_for_sm86) | Provides the DLSS-G proxy targeting RTX 20/30 / 提供面向 RTX 20/30 的 DLSS-G 插帧代理 |
+| Workflow / 编排 | **DLSS5-FrameGen** | Downloads components, selects a proxy, generates INI settings, records installed files and reads diagnostics / 下载组件、选择代理、生成配置、记录安装清单和读取诊断 |
 
-| You want to… | This toolkit helps you… |
-|---|---|
-| Try both layers together | Download the upstream components into one local kit. |
-| Configure frame generation | Choose a runtime, multiplier ceiling and optimization tier. |
-| Understand your installation | Record installed files and inspect backend logs. |
-| Help others with the same GPU | Share reproducible game tests using a structured report. |
+This project is an **orchestrator**, not a rendering implementation. It does not modify, rebuild or bundle upstream binaries. Components are downloaded from upstream repositories when you run `fetch`. DLSS5-Swapper's own interface is still needed to configure the image layer.
 
-The image layer is still configured in **DLSS5-Swapper's own interface**. Rendering and frame generation are provided by the upstream projects; this repository provides the workflow around them.
+本项目是**组合编排工具**，渲染能力来自上游项目。仓库不携带上游 DLL 或 EXE；运行 `fetch` 时才下载。画质层仍需在 DLSS5-Swapper 界面中操作，文件放置成功也不等于游戏内效果已经生效。
 
-## The workflow at a glance
+Independent community project. Not affiliated with or endorsed by NVIDIA or the upstream maintainers. DLSS and RTX are NVIDIA trademarks.
 
-```mermaid
-flowchart LR
-    A["01 · FETCH<br/>Components"] --> B["02 · CONFIGURE<br/>Image layer"]
-    B --> C["03 · INSTALL<br/>Frame generation"]
-    C --> D["04 · TEST<br/>Game + logs"]
-    classDef step fill:#172118,color:#eef4e5,stroke:#718e53,stroke-width:1px
-    class A,B,C,D step
-```
+## Features / 当前功能
 
-*Setup workflow only. This diagram is not a gameplay demonstration or performance result.*
+- **Component downloads / 组件下载** — dlssg runtime 310.9 or 310.1, plus DLSS5-Swapper portable.
+- **Proxy selection / 代理选择** — chooses an available candidate filename; avoids `dxgi.dll` by default.
+- **Frame-generation settings / 插帧配置** — 2X / 3X / 4X / 6X ceilings and tier 0–3. Actual behavior depends on the runtime and game; 6X requires a compatible 310.9 build and game.
+- **Install records / 安装记录** — manifest and backups, with safety fixes tracked in the audit.
+- **Diagnostics / 诊断** — file integrity checks and backend logs. Current detection has known limitations; see the audit.
+- **Offline development tests / 离线开发测试** — mock downloads, GPUs and game folders without loading real binaries.
 
-## Will it work with my setup?
+## Requirements / 运行条件
 
-These are the **target requirements**, not a verified compatibility list.
+Target environment: **Windows 10/11 x64, RTX 20 or RTX 30**, and a D3D12 game with native DLSS Frame Generation support. Check the upstream project's current driver requirements; this tool uses R580 as its warning threshold. Python 3.10+ is required for the CLI.
 
-| Component | Target |
-|---|---|
-| GPU | NVIDIA RTX 20 series or RTX 30 series |
-| OS | Windows 10/11, 64-bit |
-| Game | D3D12, with native DLSS Frame Generation support |
-| Driver | Follow the upstream requirements; this CLI warns below R580 |
-| Python | 3.10 or later |
-| Use | Single-player test copies, without anti-cheat |
+目标环境为 **Windows 10/11 x64、RTX 20/30**，游戏需原生支持 DLSS 帧生成并使用 D3D12。驱动要求请参照上游说明，本工具以 R580 为警告阈值。命令行工具需要 Python 3.10+。
 
-RTX 40/50, Vulkan games and games without native frame-generation support are outside this project's current target. Other mods may conflict. **Do not use this with anti-cheat or competitive multiplayer games.**
+**Single-player testing only. Do not use with anti-cheat or competitive multiplayer games.**
+**仅限单机测试，不要用于带反作弊的游戏或竞技多人游戏。**
 
-## Get started
+## Getting started / 开始使用
 
-Use an independently backed-up or disposable game copy. The current uninstall command is **not a reliable substitute for a backup**. See the [known issues](docs/STATUS.md#known-issues).
+The commands below are for experimental testing. Read the known issues and keep an independent backup before writing to any game directory.
 
-### 1. Get the toolkit
-
-[Download the source ZIP](https://github.com/ztwzeroo/DLSS5-FrameGen/archive/refs/heads/main.zip), extract it, and open PowerShell in the extracted folder. Then run:
+以下命令供实验测试使用。向游戏目录写入前，请先阅读已知问题并保留独立备份。
 
 ```powershell
+git clone https://github.com/ztwzeroo/DLSS5-FrameGen.git
+cd DLSS5-FrameGen
 py -m pip install .
-py -m dlss_combo fetch
+
+# Download upstream components / 下载上游组件
+dlss-combo fetch
+
+# Configure the image layer in DLSS5-Swapper first.
+# 先使用下载的 DLSS5-Swapper 给测试游戏副本配置画质层。
+
+# Install the frame-generation layer beside the rendering EXE.
+# 将插帧层安装到测试副本的实际渲染 EXE 所在目录。
+dlss-combo install "C:/Games/TestCopy/Binaries/Win64" --mfg 4x
+
+# After playing, inspect logs / 运行游戏后读取诊断
+dlss-combo doctor "C:/Games/TestCopy/Binaries/Win64"
 ```
 
-Prefer Git? Clone `https://github.com/ztwzeroo/DLSS5-FrameGen.git`, open that folder, and run the same commands. The Python package and CLI retain the original names `dlss_combo` and `dlss-combo`.
+The command remains **`dlss-combo`**; the public project name is **DLSS5-FrameGen**. Use `py -m dlss_combo` after installation if the command is not on your PATH.
 
-### 2. Configure the image layer
+公开项目名为 **DLSS5-FrameGen**，现有命令保持 **`dlss-combo`**。如果找不到命令，安装后可使用 `py -m dlss_combo`。
 
-Open the downloaded **DLSS5-Swapper portable EXE** in `~/dlss-combo-kit/swapper/`. Use its interface and upstream instructions to configure your **test copy** of the game. If the asset is a ZIP, follow the upstream extraction instructions first.
+| Command / 命令 | Purpose / 用途 |
+|---|---|
+| `fetch [--runtime 310.9\|310.1] [--kit-dir DIR] [--refresh]` | Download components; default cache is `~/dlss-combo-kit` / 下载组件 |
+| `install DIR [--mfg 2x\|3x\|4x\|6x] [--tier 0-3] [--runtime 310.9\|310.1] [--kit-dir DIR]` | Install the frame-generation layer / 安装插帧层 |
+| `install DIR --arch sm75\|sm86` | Override GPU detection; currently also bypasses driver detection / 覆盖 GPU 探测，当前也会跳过驱动探测 |
+| `install DIR --launch-swapper` | Open the cached Swapper asset; launch validation improvements are pending / 打开缓存的 Swapper，启动校验待完善 |
+| `doctor DIR` | Inspect files and available logs / 读取文件与日志状态 |
+| `uninstall DIR` | Remove managed files; restoration limitations remain / 卸载本工具文件，还原能力存在已知限制 |
 
-### 3. Add frame generation
+ReShade, RenoDX or Feeder file markers alone do not prove DLSS 5 is active. Coexistence with other mods depends on the game and installation route. Measure the base frame rate before raising the frame-generation multiplier.
 
-Replace the example path with the folder containing your test game's **actual rendering EXE**:
+检测到 ReShade、RenoDX 或 Feeder 文件不代表 DLSS 5 已生效。与其他 mod 是否兼容取决于具体游戏和安装路线；提高插帧倍数前，请先测不插帧时的基础帧率。
+
+## Roadmap / 改善路线
+
+- [ ] Safe file ownership, bounded uninstall paths and original configuration restoration / 文件归属、卸载范围和原始配置还原。
+- [ ] Reliable rollback and strict checksum validation / 完整回滚与严格哈希校验。
+- [ ] Transactional downloads and per-runtime version records / 下载失败保护与运行库独立版本记录。
+- [ ] Accurate session diagnostics and install previews / 准确诊断与安装预览。
+- [ ] Windows tests and a reproducible RTX 20/30 game compatibility matrix / Windows 测试与可复现的游戏兼容性表。
+
+Contributions focused on these items and reproducible game reports are welcome. Please distinguish file installation success from in-game activation and measured performance.
+
+欢迎参与上述修复，也欢迎提交可复现的游戏测试记录。请区分“文件已安装”“游戏内已生效”和“性能已经测量”。
+
+## Report results / 反馈实测
+
+[Open an issue](https://github.com/ztwzeroo/DLSS5-FrameGen/issues/new/choose) with your game and version, GPU, driver, Windows version, upstream component versions, runtime, proxy filename and settings. Include the exact steps and relevant logs. For performance reports, compare the original game, image layer only, frame generation only and both combined using the same scene and settings. Remove personal paths and account information from logs before sharing.
+
+反馈时请附游戏与版本、显卡、驱动、Windows 版本、组件版本、运行库、代理名、配置和复现步骤。性能对比请采用同一场景与设置，分别测试原版、仅画质层、仅插帧、两者组合。
+
+## Development / 开发
 
 ```powershell
-py -m dlss_combo install "C:/Games/TestCopy/Binaries/Win64" --mfg 4x
+py -m venv .venv
+.venv\Scripts\python -m pip install -e . pytest
+.venv\Scripts\python -m pytest -q
 ```
 
-`4x` is a ceiling, not a promise of four times the measured FPS. The game and runtime determine what is supported. Start by checking your base frame rate before increasing the multiplier.
+On macOS/Linux, use `python3` and `.venv/bin/python`. Tests use simulated files and GPUs; they do not demonstrate Windows runtime compatibility.
 
-### 4. Play, inspect, share
+- [Architecture / 架构设计](docs/superpowers/specs/2026-09-20-dlss-combo-design.md)
+- [Audit and acceptance criteria / 审查与验收标准](docs/reviews/2026-09-20-project-review.md)
+- [Isolated issue reproductions / 隔离问题复现](docs/reviews/2026-09-20-repro.py)
 
-Enable frame generation in the game's graphics settings if available. After a test session:
+The audit reproduction script checks that known problem behaviors can be reproduced; a successful run is **not** a safety approval. Design documents describe intended behavior; the audit records current implementation gaps.
 
-```powershell
-py -m dlss_combo doctor "C:/Games/TestCopy/Binaries/Win64"
-```
+## Credits & license / 致谢与许可
 
-A successful file installation or detected ReShade folder does **not** prove either rendering layer is active. Diagnostics have known limitations; [report your observed result](https://github.com/ztwzeroo/DLSS5-FrameGen/issues/new?template=game-test.yml), including failures.
+Thanks to the maintainers of [DLSS5-Swapper](https://github.com/rakanki911/DLSS5-Swapper) and [dlssg_for_sm86](https://github.com/sdli1995/dlssg_for_sm86). Their projects provide the rendering and frame-generation capabilities; this repository provides the integration workflow.
 
-<details>
-<summary><strong>More commands and tuning options</strong></summary>
-
-Use `py -m dlss_combo --help` or `py -m dlss_combo install --help` for the full CLI.
-
-| Option / command | What it does |
-|---|---|
-| `fetch --runtime 310.9` | Download the 310.9 runtime kit; 310.1 is also available. |
-| `fetch --kit-dir PATH` | Use a custom component cache. Use the same path with `install`. |
-| `fetch --refresh` | Redownload components. Interrupted refresh has known recovery limitations. |
-| `install DIR --tier 0` | Choose the upstream stock-numerics tier; tiers 0–3 are exposed. |
-| `install DIR --mfg 2x` | Set a lower frame-generation ceiling. 3x, 4x and 6x are also exposed. |
-| `install DIR --arch sm86` | Override GPU detection. Currently also bypasses driver detection. |
-| `uninstall DIR` | Remove managed files. Read the file-safety and restoration issues first. |
-
-6X requires a compatible 310.9 build **and** game. Setting 6X with 310.1 does not make that runtime support it. Some optimization tiers are also runtime-dependent. Consult the [upstream INI](https://github.com/sdli1995/dlssg_for_sm86/blob/main/dlssg_sm86.ini) for meanings and constraints.
-
-</details>
-
-## What has actually been tested?
-
-| Evidence | Current state |
-|---|---|
-| Offline Python tests | 81 passing on the published preview baseline |
-| Python wheel | Builds; isolated version-command check passes |
-| Windows game sessions | Not yet validated by this project |
-| FPS, latency and image quality | No verified measurements published |
-| File safety | Known issues reproduced; fixes needed before a stable release |
-
-We welcome negative results as well as successful runs. A useful comparison uses the **same scene and settings** for the original game, image layer only, frame generation only, and both layers together. Do not infer real FPS gains from the configured multiplier.
-
-**[Submit a game test →](https://github.com/ztwzeroo/DLSS5-FrameGen/issues/new?template=game-test.yml)** · [Report a bug](https://github.com/ztwzeroo/DLSS5-FrameGen/issues/new?template=bug-report.yml) · [Contribute code](CONTRIBUTING.md)
-
-## Frequently asked questions
-
-<details>
-<summary><strong>Is there a one-click Windows EXE?</strong></summary>
-
-Not yet. The download is Python source. Follow the setup guide above; the upstream Swapper portable EXE is a separate application.
-
-</details>
-
-<details>
-<summary><strong>Does this replace DLSS5-Swapper or implement DLSS 5?</strong></summary>
-
-No. DLSS5-Swapper manages the image-layer routes, and dlssg_for_sm86 provides frame generation. This toolkit coordinates their setup and diagnostics. It is an independent community project.
-
-</details>
-
-<details>
-<summary><strong>Will it double my FPS or work in every game?</strong></summary>
-
-There are no verified performance results for this combined toolkit yet. GPU, game, runtime, base frame rate and other mods all matter. Configured multipliers are not measured FPS gains.
-
-</details>
-
-<details>
-<summary><strong>Why are some command-line messages in Chinese?</strong></summary>
-
-The English documentation covers setup, but the CLI currently includes Chinese messages. English CLI output is on the roadmap. Include the original output when reporting a problem.
-
-</details>
-
-<details>
-<summary><strong>Where are the gameplay screenshots and benchmarks?</strong></summary>
-
-We will add them when reproducible Windows/NVIDIA tests are available. The banner and workflow diagram are explanatory graphics, not evidence of in-game results. Real game reports, including unsuccessful tests, are welcome.
-
-</details>
-
-## Where we're headed
-
-- [ ] Protect externally modified files and restore original configurations.
-- [ ] Make checksum validation and interrupted-install recovery reliable.
-- [ ] Add installation previews and accurate per-session diagnostics.
-- [ ] Add English CLI messages and clearer error guidance.
-- [ ] Validate Windows behavior and publish reproducible RTX 20/30 game results.
-
-See the [English status and known issues](docs/STATUS.md), [detailed audit (Chinese)](docs/reviews/2026-09-20-project-review.md), and [contributor guide](CONTRIBUTING.md).
-
-## Built on the work of
-
-**[DLSS5-Swapper](https://github.com/rakanki911/DLSS5-Swapper)** — image-layer installation routes and component management.
-**[dlssg_for_sm86](https://github.com/sdli1995/dlssg_for_sm86)** — the DLSS-G proxy and frame-generation implementation.
-
-Please support the upstream maintainers. This repository does not modify, rebuild or redistribute their binaries; `fetch` downloads components from upstream. Downloads currently have the validation limitations described above.
-
-[MIT licensed](LICENSE). Independent community project, not affiliated with or endorsed by NVIDIA or either upstream project. DLSS and RTX are NVIDIA trademarks.
+本项目代码采用 [MIT License](LICENSE)。上游组件保留各自的许可和使用条款，本仓库不分发它们的二进制文件。

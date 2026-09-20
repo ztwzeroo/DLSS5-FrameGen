@@ -29,4 +29,4 @@ def test_all_occupied_returns_none():
 
 def test_order_follows_candidates():
     assert [c.name for c in
-            (choose_proxy({"version.dll", "winmm.dll"}),)] == ["d3d12.dll"]
+            (choose_proxy({"version.dll", "winmm.dll"}),)] == ["dbghelp.dll"]

@@ -9,7 +9,7 @@ from tests.conftest import make_kit
 
 
 def test_reinstall_never_deletes_paths_outside_proxy_scope(tmp_path: Path):
-    """重要问题 1 回归：manifest 被篡改/外来时，非代理清单内的路径绝不被删。"""
+    """重要问题 1 回归（fail-closed 强化）：manifest 被篡改时直接拒绝安装。"""
     game = tmp_path / "game"
     game.mkdir()
     (game / "game.exe").write_bytes(b"MZ")
@@ -24,11 +24,11 @@ def test_reinstall_never_deletes_paths_outside_proxy_scope(tmp_path: Path):
     data["files"].append({"path": "game.exe", "sha256": "x", "origin": "kit"})
     m_path.write_text(json.dumps(data))
 
-    r = install(game, kit, arch="sm86")  # 触发重装路径
-    assert r.ok
-    assert precious.is_dir()          # 第三方目录未被动
+    r = install(game, kit, arch="sm86")  # 触发重装路径 → fail-closed
+    assert not r.ok  # 非法 manifest：拒绝而非猜测性操作
+    assert any("manifest" in w for w in r.warnings)
+    assert precious.is_dir()           # 第三方目录未被动
     assert (game / "game.exe").exists()  # 游戏 exe 未被动
-    assert (game / "version.dll").exists()  # 我们的代理正常更新
 
 
 def test_rollback_restores_deleted_own_proxy(tmp_path: Path, monkeypatch):

@@ -64,15 +64,18 @@ def detect_gpu(
     override: str | None = None,
     runner: Callable[[str], str] | None = None,
 ) -> GpuInfo:
-    """探测当前 GPU；override 直接给定架构（sm75/sm86/…）优先。"""
-    if override:
-        return GpuInfo(vendor="override", name=override, arch=override, source="override")
+    """探测当前 GPU；override 指定架构（sm75/sm86/…）但不再跳过驱动探测。"""
     run = runner or _run_command
+    info: GpuInfo | None = None
     try:
-        out = run("nvidia-smi --query-gpu=name,driver_version --format=csv")
+        info = _parse_nvidia_smi(run("nvidia-smi --query-gpu=name,driver_version --format=csv"))
     except (OSError, subprocess.SubprocessError):
-        return GpuInfo(vendor="unknown", name="", arch=None, source="unknown")
-    info = _parse_nvidia_smi(out)
+        info = None
+    if override:
+        return GpuInfo(
+            vendor="override", name=override, arch=override, source="override",
+            driver_version=info.driver_version if info else None,
+        )
     return info or GpuInfo(vendor="unknown", name="", arch=None, source="unknown")
 
 

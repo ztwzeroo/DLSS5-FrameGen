@@ -23,11 +23,19 @@ def test_ours_marker(tmp_path: Path):
 
 
 def test_reshade_detected_by_shaders_dir(tmp_path: Path):
-    (tmp_path / "reshade-shaders").mkdir()
+    shaders = tmp_path / "reshade-shaders"
+    (shaders / "SweetFX").mkdir(parents=True)
+    (shaders / "SweetFX" / "f.fx").write_text("// shader\n")
     (tmp_path / "dxgi.dll").write_bytes(b"x")
     s = scan_game_dir(tmp_path)
     assert s.reshade
     assert s.existing_proxies["dxgi.dll"] == "foreign"
+
+
+def test_empty_reshade_shaders_dir_is_not_reshade(tmp_path: Path):
+    (tmp_path / "reshade-shaders").mkdir()
+    (tmp_path / "dxgi.dll").write_bytes(b"x")
+    assert not scan_game_dir(tmp_path).reshade
 
 
 def test_reshade_detected_by_ini_and_dxgi(tmp_path: Path):

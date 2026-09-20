@@ -29,7 +29,10 @@ def scan_game_dir(game_dir: Path, our_files: set[str] | None = None) -> GameScan
         entries = []
     files = {e.name.lower() for e in entries if e.is_file()}
     dirs = {e.name.lower() for e in entries if e.is_dir()}
-    reshade = ("reshade-shaders" in dirs) or (
+    # 空 reshade-shaders 文件夹不构成 ReShade 证据（审查 G：避免误报画质层）
+    reshade_dir = game_dir / "reshade-shaders"
+    shaders_nonempty = reshade_dir.is_dir() and any(reshade_dir.iterdir())
+    reshade = shaders_nonempty or (
         ("dxgi.dll" in files) and ("reshade.ini" in files)
     )
     optiscaler = ("optiscaler.ini" in files) or ("optiscaler" in dirs)

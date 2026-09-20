@@ -4,7 +4,9 @@ from pathlib import Path
 import pytest
 
 from dlss_combo.install import install
+from tests.conftest import rehash_kit
 from dlss_combo.uninstall import uninstall
+from tests.conftest import rehash_kit
 
 
 def test_uninstall_restores_clean_state(game: Path, kit: Path):
@@ -42,6 +44,7 @@ def test_uninstall_restores_backup_of_foreign_file(tmp_path: Path, kit: Path):
 def test_uninstall_after_reinstall_leaves_no_stale_proxy(game: Path, kit: Path):
     install(game, kit, arch="sm86")
     (kit / "dlssg" / "310.9" / "version.dll").write_bytes(b"V9-new")
+    rehash_kit(kit)
     install(game, kit, arch="sm86")  # 重装：旧 version.dll 进备份
     uninstall(game)
     assert not (game / "version.dll").exists()  # 备份是我们自己的旧件，不还原

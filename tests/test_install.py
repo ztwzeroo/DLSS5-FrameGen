@@ -2,6 +2,7 @@ import json
 from pathlib import Path
 
 from dlss_combo.install import install
+from tests.conftest import rehash_kit
 
 
 def test_fresh_install_uses_version_dll(game: Path, kit: Path):
@@ -50,6 +51,7 @@ def test_all_proxies_occupied_fails(game: Path, kit: Path):
 def test_reinstall_upgrades_and_keeps_single_proxy(game: Path, kit: Path):
     assert install(game, kit, arch="sm86").ok
     (kit / "dlssg" / "310.9" / "version.dll").write_bytes(b"V9-new")
+    rehash_kit(kit)
     r = install(game, kit, arch="sm86")
     assert r.ok and r.proxy_name == "version.dll"
     assert (game / "version.dll").read_bytes() == b"V9-new"
