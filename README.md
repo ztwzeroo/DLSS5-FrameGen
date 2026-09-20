@@ -74,7 +74,7 @@ Use an independently backed-up or disposable game copy. Uninstall validates its 
 
 ### 1. Get the toolkit
 
-**Easiest (no Python needed):** grab `dlss-combo-<version>-windows-x64.zip` from [Releases](../../releases), extract `dlss-combo.exe`, and use it anywhere below in place of `py -m dlss_combo`:
+**Easiest (no Python needed):** grab `dlss-combo-<version>-windows-x64.zip` from the [Latest release](../../releases/latest), extract `dlss-combo.exe`, and use it anywhere below in place of `py -m dlss_combo`:
 
 ```powershell
 .\dlss-combo.exe fetch
