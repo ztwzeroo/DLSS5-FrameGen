@@ -40,8 +40,12 @@ with tempfile.TemporaryDirectory(prefix='dlss-audit-') as tmp:
     m = Manifest()
     m.record_file('../outside-sentinel.txt', m.sha256_of(outside), 'kit')
     m.save(g)
-    uninstall(g)
-    record('uninstall deletes outside game directory', not outside.exists())
+    try:
+        uninstall(g)
+        deleted = not outside.exists()
+    except ValueError:
+        deleted = False  # 修复后：非法清单被拒绝，目录外文件保留
+    record('uninstall deletes outside game directory', deleted)
 
     g = game('foreign-ini')
     ini = g / 'dlssg_sm86.ini'
@@ -97,10 +101,15 @@ with tempfile.TemporaryDirectory(prefix='dlss-audit-') as tmp:
     meta_path.write_text(json.dumps(meta))
     exe.write_bytes(b'modified exe')
     launched = []
-    launch_swapper(kit, spawn=launched.append)
+    try:
+        launch_swapper(kit, spawn=launched.append)
+    except RuntimeError:
+        pass  # 修复后：哈希不符拒绝启动
     record('changed Swapper passed to launcher without hash check', launched == [exe])
     fetch_kit(kit, refresh=True, fetch_bytes=lambda url: b'{"sha":"next-commit"}' if url.endswith('commits/main') else b'new fixture')
     record('kit refresh drops Swapper metadata', 'swapper' not in json.loads(meta_path.read_text()))
 
 print(json.dumps(results, ensure_ascii=False, indent=2))
-assert all(r['observed'] for r in results), 'Observed behavior changed: recheck audit report'
+# 修复后语义：observed=False 表示缺陷已消除；全部为 False 即修复完成。
+assert not any(r['observed'] for r in results), 'Some issues are STILL present: ' + str(
+    [r['case'] for r in results if r['observed']])

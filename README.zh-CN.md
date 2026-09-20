@@ -15,6 +15,13 @@
 [![Target: Windows](https://img.shields.io/badge/target-Windows-0078D6)](#requirements--运行条件)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
+**下载 / Download**: [Releases](https://github.com/ztwzeroo/DLSS5-FrameGen/releases) 提供
+Windows EXE 与 Linux x64 二进制（GitHub Actions 从打 tag 的提交构建，未签名），
+也可 `pipx install git+https://github.com/ztwzeroo/DLSS5-FrameGen.git` 从源码运行。
+
+> Linux/Steam Proton：游戏目录填 Proton prefix 内的 Windows 路径，启动选项加
+> `WINEDLLOVERRIDES="version=n,b" PROTON_ENABLE_NVAPI=1 PROTON_NVIDIA_NVCUDA=1 %command%`（详见英文 README 的 Linux 一节）。
+
 [How it works / 工作原理](#how-it-works--工作原理) · [Getting started / 开始使用](#getting-started--开始使用) · [Known issues / 已知问题](docs/reviews/2026-09-20-project-review.md) · [Report results / 反馈实测](https://github.com/ztwzeroo/DLSS5-FrameGen/issues)
 
 </div>
@@ -24,9 +31,9 @@
 > **Experimental developer preview — not a stable installer.**
 > **实验性开发预览，尚非稳定安装器。**
 >
-> 81 offline tests pass, and the Python wheel builds successfully. Windows/NVIDIA game testing, image quality, FPS gains and combined compatibility have **not yet been validated by this project**.
+> 107 offline tests pass, and the Python wheel builds successfully. Windows/NVIDIA game testing, image quality, FPS gains and combined compatibility have **not yet been validated by this project**.
 >
-> 已通过 81 个离线测试与 Python 包构建检查；本项目尚未完成 Windows/NVIDIA 游戏实测，画质、帧率提升和组合稳定性均待验证。
+> 已通过 107 个离线测试与 Python 包构建检查；本项目尚未完成 Windows/NVIDIA 游戏实测，画质、帧率提升和组合稳定性均待验证。
 >
 > The [project audit](docs/reviews/2026-09-20-project-review.md) identifies unresolved file deletion, backup/restore and checksum issues. Use disposable test directories or separately backed-up game copies. Do not rely on this version's uninstall command as your only recovery method.
 >

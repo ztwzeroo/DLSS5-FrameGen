@@ -4,34 +4,34 @@
 
 **This is an experimental source preview, not a stable installer.** It is intended for contributors and experienced modders working on disposable directories or independently backed-up game copies.
 
-This page describes the published preview based on code commit `9e55ebb`. Uncommitted local fixes are not part of this release. Check the published source and evidence before assuming a problem has been fixed.
+This page describes the tree after the 2026-09-20 review fixes landed (see [the review](2026-09-20-project-review.md) and [repro script](2026-09-20-repro.py); all nine reproduced behaviors now assert fixed). In-game behavior remains unverified.
 
 ## Evidence so far
 
-- 81 offline Python tests pass on macOS. They use simulated GPUs, downloaded bytes and game directories.
+- 107 offline Python tests pass; CI runs them on Windows/Linux/macOS on every push.
 - A Python wheel builds, and an isolated CLI version check succeeds.
-- Nine known problem behaviors were reproduced with temporary fake files.
+- The nine reproduced problem behaviors from the 2026-09-20 review are fixed and covered by regression tests; the repro script reports all nine as fixed.
 - No Windows/NVIDIA game session, image-quality comparison, latency test or FPS benchmark has been validated by this project.
 
 Upstream support claims and configuration limits are not a substitute for testing the combined setup. A `4x` or `6x` setting is a frame-generation ceiling, not a measured performance improvement.
 
 ## Known issues
 
-### File deletion and ownership
+### File deletion and ownership — FIXED 2026-09-20
 
-Uninstall trusts paths from the installation manifest. An edited or malformed manifest can point outside the game directory. Reinstall and uninstall also identify managed files by name without adequately checking whether another mod replaced them.
+Manifests are now validated before any destructive step (schema version, allowed filenames only, relative paths, no `..`/absolute/symlink escapes, backups confined to `.dlss-combo/`), and files whose current hash no longer matches the install record are treated as third-party and left untouched.
 
-**Impact:** unrelated or externally modified files can be removed or overwritten. Do not import or modify manifests. Use disposable copies until bounded paths and ownership validation are implemented.
+**Evidence:** `tests/test_review2.py` traversal/absolute/backup-escape cases; review repro scenario 1 and 3 report fixed.
 
-### Original configuration and recovery
+### Original configuration and recovery — FIXED 2026-09-20
 
-An existing `dlssg_sm86.ini` can be overwritten without a restorable original backup. A copy that writes partial data and then fails can leave a corrupt DLL instead of restoring the previous one. Manifest writes are not atomic.
+Pre-existing user INI files are backed up as `pre-existing` (distinct from tool-history backups) and restored on uninstall across upgrades. All disk writes (DLL/INI/manifest/downloads) go through temp-file + atomic replace; rollback restores deleted files and cleans partial temp files.
 
-**Impact:** uninstall is not a guaranteed return to the original state. Keep a separate backup; do not use this tool as the sole backup or recovery mechanism.
+**Evidence:** review repro scenarios 2 and 5 report fixed; `test_preexisting_ini_preserved_across_lifecycle`, `test_partial_copy_failure_leaves_old_dll_intact`.
 
-### Download and launch validation
+### Download and launch validation — HARDENED 2026-09-20
 
-Missing entries in the checksum map can pass verification. Cached Swapper files are not rechecked before launch. Locally computed hashes establish a baseline but do not independently authenticate an upstream binary.
+Every required kit file must have a well-formed matching SHA256 (`missing checksum` is a failure), cache hits are re-verified with automatic refetch on corruption, and the Swapper binary is hash-checked (and refused if a ZIP) before launch. Self-computed hashes remain a local-integrity baseline, not upstream authentication — upstream publishes no checksums for these assets.
 
 **Impact:** the preview does not deliver complete checksum enforcement. Review upstream download verification instructions and avoid modified/shared component caches.
 
