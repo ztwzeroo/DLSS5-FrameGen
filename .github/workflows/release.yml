@@ -84,7 +84,8 @@ jobs:
           python - <<'PY'
           # 单文件程序内嵌的 .so 是 zlib 压缩的，外层字符串扫描会漏报真实下限
           # （v0.1.1 独立复核 R4）。解包 CArchive、解析每个内嵌 ELF 的动态符号版本。
-          import glob, os, re, subprocess, sys, tempfile
+          # 注意：本版本 PyInstaller 的 CArchiveReader.extract(name) 返回解压字节。
+          import os, re, subprocess, sys, tempfile
           from PyInstaller.archive.readers import CArchiveReader
 
           app = "dist/dlss-combo"
@@ -99,22 +100,33 @@ jobs:
               return best
 
           overall = glibc_max(app)  # 外层启动器
+          elf_count = 0
+          failures = []
           with tempfile.TemporaryDirectory() as td:
               reader = CArchiveReader(app)
               for name in list(reader.toc.keys()):
                   try:
-                      reader.extract(name, td)
-                  except Exception:
+                      data = reader.extract(name)
+                  except Exception as e:
+                      failures.append(f"{name}: {type(e).__name__}")
                       continue
-              for p in glob.glob(os.path.join(td, "**"), recursive=True):
-                  if os.path.isfile(p):
-                      with open(p, "rb") as fh:
-                          if fh.read(4) == b"\x7fELF":
-                              overall = max(overall, glibc_max(p))
+                  if not isinstance(data, (bytes, bytearray)) or not data:
+                      continue
+                  out_path = os.path.join(td, os.path.basename(name))
+                  with open(out_path, "wb") as fh:
+                      fh.write(data)
+                  with open(out_path, "rb") as fh:
+                      if fh.read(4) != b"\x7fELF":
+                          continue
+                  elf_count += 1
+                  overall = max(overall, glibc_max(out_path))
+          if elf_count == 0:
+              # 严格门槛：解析不到任何内嵌 ELF 视为量测失败，绝不静默回退到外层值
+              sys.exit("no embedded ELF parsed; extraction failures: " + "; ".join(failures[:5]))
           if overall == (0, 0):
               sys.exit("no GLIBC version references found - measurement failed")
           floor = f"{overall[0]}.{overall[1]}"
-          print("measured real glibc floor (CArchive-extracted ELF .gnu.version_r):", floor)
+          print(f"measured real glibc floor ({elf_count} embedded ELF parsed): {floor}")
           with open("glibc_floor.txt", "w") as fh:
               fh.write(floor)
           PY

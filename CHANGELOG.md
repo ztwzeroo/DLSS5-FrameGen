@@ -5,6 +5,19 @@ All notable changes to this project are documented here. The format follows
 [SemVer](https://semver.org/) with a `0.x` experimental prefix. Evidence links
 point to files in this repository (`docs/`) so the trail is auditable offline.
 
+## [0.1.3] — 2026-09-20
+
+### Fixed
+
+- Corrected release for v0.1.2's Linux measurement defect: the v0.1.2
+  workflow's embedded-library extraction silently failed (wrong
+  `CArchiveReader.extract` call signature) and fell back to the outer-file
+  string scan, so `build-info.txt` again reported the under-stated floor
+  (2.14). The step now uses the bytes-returning extraction API and **fails
+  loudly when zero embedded ELF libraries parse** (no silent fallback). The
+  real floor (expected 2.35, from the embedded libpython3.13) is recorded per
+  build. v0.1.2 assets are left untouched; prefer this release.
+
 ## [0.1.2] — 2026-09-20
 
 ### Fixed (independent v0.1.1 review, R1–R7)
@@ -119,6 +132,7 @@ The nine reproduced problem behaviors are pinned by
 `docs/reviews/2026-09-20-repro.py` (all report fixed) and migrated into
 regression tests (`tests/test_review2.py`).
 
+[0.1.3]: https://github.com/ztwzeroo/DLSS5-FrameGen/releases/tag/v0.1.3
 [0.1.2]: https://github.com/ztwzeroo/DLSS5-FrameGen/releases/tag/v0.1.2
 [0.1.1]: https://github.com/ztwzeroo/DLSS5-FrameGen/releases/tag/v0.1.1
 [0.1.0]: https://github.com/ztwzeroo/DLSS5-FrameGen/releases/tag/v0.1.0
