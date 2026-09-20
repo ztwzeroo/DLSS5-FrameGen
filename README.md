@@ -137,23 +137,24 @@ Use `py -m dlss_combo --help` or `py -m dlss_combo install --help` for the full 
 
 ## Linux / Steam Proton
 
-Windows games running through Proton are still Windows processes, so the frame-generation layer applies the same way (the same route [DLSS Unlocked](https://github.com/ShyVortex/DLSS-Unlocked) documents for Linux). Grab `dlss-combo-<version>-linux-x64.zip`, then point the CLI at the game folder **inside the Proton prefix**:
+Windows games running through Proton are still Windows processes, so the frame-generation layer is expected to apply the same way — **not yet verified end-to-end by this project on Linux**. Grab `dlss-combo-<version>-linux-x64.zip`, then point the CLI at the folder containing the game's **rendering EXE**. The reliable way to find it is Steam → *Manage* → **Browse local files** (for Proton installs that lands you inside the prefix's `drive_c`; don't assume a fixed prefix layout — always locate the actual EXE folder):
 
 ```bash
 chmod +x dlss-combo
-GAMEPFX="$HOME/.steam/steam/steamapps/compatdata/<AppID>/pfx/drive_c"
-./dlss-combo install "$GAMEPFX/…/Binaries/Win64" --arch sm86
+./dlss-combo install "/path/to/Game/Binaries/Win64" --arch sm86
 ```
 
-Add Steam launch options so Wine loads the proxy and Proton exposes NVAPI/CUDA:
+Some setups add Steam launch options so Wine loads the proxy and Proton exposes
+NVAPI/CUDA:
 
 ```
 WINEDLLOVERRIDES="version=n,b" PROTON_ENABLE_NVAPI=1 PROTON_NVIDIA_NVCUDA=1 %command%
 ```
 
-- Substitute the actual proxy name (`winmm`/`dbghelp`/…) if it is not `version.dll`.
+> These options are community convention (the route [DLSS Unlocked](https://github.com/ShyVortex/DLSS-Unlocked) documents), **not verified with this toolkit** — check your Proton version's behavior against [Valve's config notes](https://github.com/ValveSoftware/Proton#runtime-config-options) before relying on them. Substitute the actual proxy name (`winmm`/`dbghelp`/…) if it is not `version.dll`.
+
 - The image layer (DLSS5-Swapper) is a Windows GUI app; running it via Wine is upstream-experimental — on Linux, validate the frame-generation layer first.
-- Linux binaries are built on Ubuntu runners; other distros need a reasonably recent glibc (or run from source).
+- **Linux binaries require glibc >= 2.35** (built on Ubuntu 22.04; the measured symbol-version floor ships in each zip's `build-info.txt`; other distros unverified — or run from source).
 
 ## What has actually been tested?
 

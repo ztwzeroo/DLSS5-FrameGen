@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "dlss-combo"
-version = "0.1.0"
+dynamic = ["version"]
 description = "DLSS5-FrameGen: experimental DLSS 5 + Frame Generation toolkit for RTX 20/30"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -13,6 +13,9 @@ license = { text = "MIT" }
 [project.urls]
 Homepage = "https://github.com/ztwzeroo/DLSS5-FrameGen"
 Issues = "https://github.com/ztwzeroo/DLSS5-FrameGen/issues"
+
+[tool.setuptools.dynamic]
+version = { attr = "dlss_combo.__version__" }
 
 [project.optional-dependencies]
 dev = ["pytest>=8"]

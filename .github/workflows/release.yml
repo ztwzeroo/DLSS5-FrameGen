@@ -17,7 +17,8 @@ jobs:
           - os: windows-latest
             platform: windows-x64
             binary: dlss-combo.exe
-          - os: ubuntu-latest
+          # ubuntu-22.04：较老 glibc 构建环境，降低 Linux 运行库下限
+          - os: ubuntu-22.04
             platform: linux-x64
             binary: dlss-combo
     runs-on: ${{ matrix.os }}
@@ -32,6 +33,9 @@ jobs:
           pip install pyinstaller
       - name: Run tests before packaging
         run: python -m pytest -q
+      - name: Review repro audit (all issues must stay fixed)
+        shell: bash
+        run: python docs/reviews/2026-09-20-repro.py
       - name: Build one-file binary
         shell: bash
         run: |
@@ -39,19 +43,103 @@ jobs:
           pyinstaller --onefile --name dlss-combo --noconfirm build_entry.py
           test -f "dist/${{ matrix.binary }}"
           "./dist/${{ matrix.binary }}" --version
+      - name: Packaged binary functional smoke (install / doctor / uninstall)
+        shell: bash
+        run: |
+          set -e
+          SMK=$(mktemp -d) SGAME=$(mktemp -d)
+          python - "$SMK" <<'PY'
+          import json, sys, hashlib
+          from pathlib import Path
+          kit = Path(sys.argv[1])
+          root = kit / "dlssg" / "310.9" / "alternatives"
+          root.mkdir(parents=True)
+          files = {}
+          (kit / "dlssg" / "310.9" / "version.dll").write_bytes(b"V")
+          (kit / "dlssg" / "310.9" / "dlssg_sm86.ini").write_text("; ref")
+          for n in ["winmm", "d3d12", "dbghelp", "dinput8", "dxgi"]:
+              (root / f"{n}.dll").write_bytes(n.encode())
+          for p in (kit / "dlssg" / "310.9").rglob("*"):
+              if p.is_file():
+                  files[f"dlssg/310.9/{p.relative_to(kit / 'dlssg' / '310.9')}"] = \
+                      hashlib.sha256(p.read_bytes()).hexdigest()
+          (kit / "kit.json").write_text(json.dumps(
+              {"version": 1, "dlssg_commits": {"310.9": "ci"}, "files": files}))
+          PY
+          printf 'MZ' > "$SGAME/game.exe"
+          BIN="./dist/${{ matrix.binary }}"
+          "$BIN" install "$SGAME" --kit-dir "$SMK" --arch sm86 --mfg 4x
+          test -f "$SGAME/dlssg_sm86.ini" && test -f "$SGAME/version.dll"
+          "$BIN" doctor "$SGAME"
+          "$BIN" uninstall "$SGAME"
+          test ! -e "$SGAME/version.dll" && test ! -e "$SGAME/dlssg_sm86.ini"
+          test -f "$SGAME/game.exe"
+          echo "packaged binary smoke OK"
+      - name: Measure glibc requirement (linux)
+        if: matrix.platform == 'linux-x64'
+        id: glibc
+        shell: bash
+        run: |
+          FLOOR=$(objdump -T "dist/${{ matrix.binary }}" | grep -o 'GLIBC_[0-9.]*' | sort -V | tail -1 | cut -d_ -f2)
+          echo "floor=$FLOOR" >> "$GITHUB_OUTPUT"
+          echo "measured glibc symbol floor: $FLOOR"
+      - name: Write build info and quickstart into package
+        shell: bash
+        run: |
+          FLOOR="${{ steps.glibc.outputs.floor }}"
+          mkdir -p pkg
+          cp "dist/${{ matrix.binary }}" "pkg/${{ matrix.binary }}"
+          if [ "${{ matrix.platform }}" = "linux-x64" ]; then chmod +x "pkg/${{ matrix.binary }}"; fi
+          cp LICENSE pkg/LICENSE
+          {
+            echo "dlss-combo ${{ github.ref_name }} (${{ matrix.platform }})"
+            echo "source commit: ${{ github.sha }}"
+            echo "built: $(date -u +%Y-%m-%dT%H:%M:%SZ) on ${{ matrix.os }}"
+            if [ -n "$FLOOR" ]; then
+              echo "linux glibc symbol floor (measured): GLIBC_$FLOOR"
+            fi
+          } > pkg/build-info.txt
+          cat > pkg/QUICKSTART.txt <<'TXT'
+          DLSS5-FrameGen quick start (CLI, developer preview)
+          ====================================================
+
+          This is a COMMAND-LINE tool, not a GUI installer. Run it from
+          PowerShell / a terminal. It combines two community projects:
+          DLSS5-Swapper (DLSS 5 image layer) + dlssg_for_sm86 (frame
+          generation on RTX 20/30). Single-player games only; never use it
+          with anti-cheat multiplayer titles. Keep your own game backups.
+
+          Windows (PowerShell):
+            .\dlss-combo.exe --help
+            .\dlss-combo.exe fetch
+            .\dlss-combo.exe install "C:\Games\YourGame\Binaries\Win64" --arch sm86
+            .\dlss-combo.exe doctor "C:\Games\YourGame\Binaries\Win64"
+            .\dlss-combo.exe uninstall "C:\Games\YourGame\Binaries\Win64"
+
+          Linux / Steam Proton (experimental):
+            Find the game's real folder via Steam -> Manage ->
+            "Browse local files", then locate the folder that contains the
+            rendering EXE. Run the same commands with ./dlss-combo.
+            Proton launch options some setups use (NOT verified with this
+            toolkit - check your Proton version's documentation first):
+              WINEDLLOVERRIDES="version=n,b" PROTON_ENABLE_NVAPI=1 %command%
+
+          The binary is UNSIGNED. Verify the download against SHA256SUMS.txt
+          before running. Security software may warn about unsigned
+          executables; that is not a claim that any warning is a false
+          positive - decide with your own judgement.
+
+          Full documentation: https://github.com/ztwzeroo/DLSS5-FrameGen
+          TXT
       - name: Package zip with checksum
         shell: bash
         run: |
           tag="${GITHUB_REF_NAME:-dev}"
           zip_name="dlss-combo-${tag}-${{ matrix.platform }}.zip"
-          bin="${{ matrix.binary }}"
-          if [ "${{ matrix.platform }}" = "linux-x64" ]; then
-            chmod +x "dist/$bin"
-          fi
           if command -v zip >/dev/null 2>&1; then
-            (cd dist && zip "../$zip_name" "$bin")
+            (cd pkg && zip "../$zip_name" "${{ matrix.binary }}" LICENSE QUICKSTART.txt build-info.txt)
           else
-            powershell Compress-Archive -Path "dist/$bin" -DestinationPath "$zip_name"
+            powershell Compress-Archive -Path "pkg/*" -DestinationPath "$zip_name"
           fi
           sha256sum "$zip_name" > "SHA256SUMS-${{ matrix.platform }}.txt"
           cat "SHA256SUMS-${{ matrix.platform }}.txt"
@@ -75,40 +163,56 @@ jobs:
           merge-multiple: true
       - name: Merge checksums
         run: cat dist-artifacts/SHA256SUMS-*.txt > dist-artifacts/SHA256SUMS.txt
-      - name: Create GitHub Release
+      - name: Create GitHub Release (pre-release)
         uses: softprops/action-gh-release@v2
         with:
+          prerelease: true
           files: |
             dist-artifacts/*.zip
             dist-artifacts/SHA256SUMS.txt
           body: |
-            ## dlss-combo ${{ github.ref_name }}
+            ## dlss-combo ${{ github.ref_name }} — developer preview
 
-            ### Windows（无需 Python）
-            下载 `dlss-combo-${{ github.ref_name }}-windows-x64.zip`，解压得到
-            `dlss-combo.exe`：
-            ```bat
-            dlss-combo.exe fetch
-            dlss-combo.exe install "C:\Games\YourGame\Binaries\Win64" --arch sm86
-            dlss-combo.exe doctor "C:\Games\YourGame\Binaries\Win64"
+            Command-line toolkit (no GUI). It sets up frame generation
+            ([dlssg_for_sm86](https://github.com/sdli1995/dlssg_for_sm86)) on
+            RTX 20/30 and coordinates it with the DLSS 5 image layer from
+            [DLSS5-Swapper](https://github.com/rakanki911/DLSS5-Swapper).
+            Single-player games only. In-game results are not yet validated by
+            this project — read the
+            [known limitations](https://github.com/ztwzeroo/DLSS5-FrameGen/blob/main/docs/STATUS.md)
+            first.
+
+            Each zip contains the binary, `LICENSE`, `QUICKSTART.txt` and
+            `build-info.txt` (source commit, build time, measured Linux glibc
+            floor). Verify downloads against `SHA256SUMS.txt`.
+
+            ### Windows 10/11 x64 — main download
+
+            `dlss-combo-${{ github.ref_name }}-windows-x64.zip` → `dlss-combo.exe`
+            (no Python needed; unsigned — see QUICKSTART.txt). PowerShell:
+
+            ```powershell
+            .\dlss-combo.exe --help
+            .\dlss-combo.exe fetch
+            .\dlss-combo.exe install "C:\Games\YourGame\Binaries\Win64" --arch sm86
+            .\dlss-combo.exe doctor "C:\Games\YourGame\Binaries\Win64"
             ```
 
-            ### Linux（Steam Proton）
-            下载 `dlss-combo-${{ github.ref_name }}-linux-x64.zip`，解压并
-            `chmod +x dlss-combo`。游戏目录填 **Proton prefix 里**的 Windows 路径：
-            ```bash
-            ./dlss-combo fetch
-            GAMEPFX="$HOME/.steam/steam/steamapps/compatdata/<游戏AppID>/pfx/drive_c"
-            ./dlss-combo install "$GAMEPFX/…/Game/Binaries/Win64" --arch sm86
-            ```
-            Steam 启动选项（代理 DLL 覆盖 + NVAPI/CUDA 透传，参考 DLSS Unlocked
-            的 Linux 指引）：
-            ```
-            WINEDLLOVERRIDES="version=n,b" PROTON_ENABLE_NVAPI=1 PROTON_NVIDIA_NVCUDA=1 %command%
-            ```
-            > 代理名非 version.dll 时把 `version=n,b` 换成对应名字；
-            > 画质层（DLSS5-Swapper）是 Windows GUI 程序，Linux 下需经 Wine 运行，
-            > 上游自述 Linux 支持为实验性。
+            ### Linux x86-64 — experimental
 
-            校验值见 `SHA256SUMS.txt`。未签名二进制首次运行可能触发
-            SmartScreen / 门禁提示，属常见信誉提示。
+            `dlss-combo-${{ github.ref_name }}-linux-x64.zip`. Built on Ubuntu
+            22.04; requires glibc >= 2.35 (the measured symbol-version floor is
+            in the zip's `build-info.txt`; other distros unverified — or run
+            from source). For Steam games, find the real game folder via
+            Steam → Manage → *Browse local files*, then target the folder
+            containing the rendering EXE. Proton launch options some setups
+            use (`WINEDLLOVERRIDES="version=n,b" PROTON_ENABLE_NVAPI=1
+            %command%`) are community convention, **not verified with this
+            toolkit** — check your Proton version's documentation
+            ([Valve's config notes](https://github.com/ValveSoftware/Proton#runtime-config-options)).
+
+            ### 简要中文说明
+
+            命令行工具（非图形安装器）。Windows 下载 zip 解压即用；Linux 为实验性
+            （Ubuntu 22.04 构建，glibc ≥ 2.35）。仅限单机游戏；游戏内效果尚未经
+            本项目真机验证，详见仓库 README 与 docs/STATUS.md。
