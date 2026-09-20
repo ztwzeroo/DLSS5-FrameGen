@@ -9,7 +9,7 @@ def test_fresh_install_uses_version_dll(game: Path, kit: Path):
     r = install(game, kit, arch="sm86")
     assert r.ok and r.proxy_name == "version.dll"
     assert (game / "version.dll").read_bytes() == b"V9"
-    ini = (game / "dlssg_sm86.ini").read_text()
+    ini = (game / "dlssg_sm86.ini").read_text(encoding="utf-8")
     assert "MaxGeneratedFrames=3" in ini
     m = json.loads((game / ".dlss-combo" / "manifest.json").read_text())
     assert m["dlssg"]["proxy_name"] == "version.dll"
@@ -61,8 +61,8 @@ def test_reinstall_upgrades_and_keeps_single_proxy(game: Path, kit: Path):
 def test_6x_writes_maxframes_5(game: Path, kit: Path):
     r = install(game, kit, arch="sm86", mfg="6x", tier=2)
     assert r.ok
-    assert "MaxGeneratedFrames=5" in (game / "dlssg_sm86.ini").read_text()
-    assert "Optimized=2" in (game / "dlssg_sm86.ini").read_text()
+    assert "MaxGeneratedFrames=5" in (game / "dlssg_sm86.ini").read_text(encoding="utf-8")
+    assert "Optimized=2" in (game / "dlssg_sm86.ini").read_text(encoding="utf-8")
 
 
 def test_missing_dlss5_layer_gets_guidance(game: Path, kit: Path):
