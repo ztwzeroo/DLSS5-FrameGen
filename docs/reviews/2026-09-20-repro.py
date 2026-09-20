@@ -36,7 +36,7 @@ with tempfile.TemporaryDirectory(prefix='dlss-audit-') as tmp:
 
     g = game('uninstall-traversal')
     outside = root / 'outside-sentinel.txt'
-    outside.write_text('keep')
+    outside.write_text('keep', encoding='utf-8')
     m = Manifest()
     m.record_file('../outside-sentinel.txt', m.sha256_of(outside), 'kit')
     m.save(g)
@@ -49,9 +49,9 @@ with tempfile.TemporaryDirectory(prefix='dlss-audit-') as tmp:
 
     g = game('foreign-ini')
     ini = g / 'dlssg_sm86.ini'
-    ini.write_text('; original custom settings')
+    ini.write_text('; original custom settings', encoding='utf-8')
     install(g, kit, arch='sm86')
-    overwritten = ini.read_text() != '; original custom settings'
+    overwritten = ini.read_text(encoding='utf-8') != '; original custom settings'
     uninstall(g)
     record('preexisting INI overwritten and lost after uninstall', overwritten and not ini.exists())
 
@@ -65,12 +65,12 @@ with tempfile.TemporaryDirectory(prefix='dlss-audit-') as tmp:
     record('third party replacement overwritten and backup erased on uninstall', overwritten and not (g / '.dlss-combo').exists())
 
     meta_path = kit / 'kit.json'
-    original = meta_path.read_text()
+    original = meta_path.read_text(encoding='utf-8')
     meta = json.loads(original)
     meta['files'] = {}
-    meta_path.write_text(json.dumps(meta))
+    meta_path.write_text(json.dumps(meta), encoding='utf-8')
     record('empty checksum map passes verify_kit', verify_kit(kit) == [])
-    meta_path.write_text(original)
+    meta_path.write_text(original, encoding='utf-8')
 
     g = game('partial-copy')
     install(g, kit, arch='sm86')
@@ -98,7 +98,7 @@ with tempfile.TemporaryDirectory(prefix='dlss-audit-') as tmp:
     exe.parent.mkdir()
     exe.write_bytes(b'original exe')
     meta['swapper'] = {'zip':'swapper/portable.exe', 'tag':'audit', 'sha256':hashlib.sha256(exe.read_bytes()).hexdigest()}
-    meta_path.write_text(json.dumps(meta))
+    meta_path.write_text(json.dumps(meta), encoding='utf-8')
     exe.write_bytes(b'modified exe')
     launched = []
     try:
@@ -107,7 +107,7 @@ with tempfile.TemporaryDirectory(prefix='dlss-audit-') as tmp:
         pass  # 修复后：哈希不符拒绝启动
     record('changed Swapper passed to launcher without hash check', launched == [exe])
     fetch_kit(kit, refresh=True, fetch_bytes=lambda url: b'{"sha":"next-commit"}' if url.endswith('commits/main') else b'new fixture')
-    record('kit refresh drops Swapper metadata', 'swapper' not in json.loads(meta_path.read_text()))
+    record('kit refresh drops Swapper metadata', 'swapper' not in json.loads(meta_path.read_text(encoding='utf-8')))
 
 print(json.dumps(results, ensure_ascii=False, indent=2))
 # 修复后语义：observed=False 表示缺陷已消除；全部为 False 即修复完成。
