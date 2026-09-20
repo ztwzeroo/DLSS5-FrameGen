@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Read the preview status first
+    url: https://github.com/ztwzeroo/DLSS5-FrameGen/blob/main/docs/STATUS.md
+    about: Known issues, test evidence and current limits.

@@ -1,0 +1,53 @@
+name: Game compatibility test
+description: Share a real RTX 20/30 test, including failed attempts.
+title: "[Game test] Game name / GPU"
+body:
+  - type: markdown
+    attributes:
+      value: "Thanks for testing. Read docs/STATUS.md first and use a separately backed-up game copy. Do not test anti-cheat games. Report only observations you actually verified."
+  - type: input
+    id: game
+    attributes:
+      label: Game and build
+      placeholder: "Game title, version, launcher, graphics API"
+    validations:
+      required: true
+  - type: input
+    id: system
+    attributes:
+      label: GPU, driver and Windows version
+      placeholder: "RTX model / NVIDIA driver / Windows build"
+    validations:
+      required: true
+  - type: textarea
+    id: components
+    attributes:
+      label: Components and settings
+      description: "Include toolkit commit, both upstream versions, runtime, selected proxy, tier, multiplier, resolution and other mods."
+    validations:
+      required: true
+  - type: dropdown
+    id: result
+    attributes:
+      label: Observed result
+      options:
+        - "Installation failed"
+        - "Files installed; game activation not verified"
+        - "Game failed to launch or crashed"
+        - "Only one rendering layer was verified active"
+        - "Both layers were verified active — explain evidence below"
+        - "Inconclusive or another result — explain below"
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Steps and evidence
+      description: "Describe how you verified each layer. Include relevant logs or screenshots. Remove personal paths and account information."
+    validations:
+      required: true
+  - type: textarea
+    id: performance
+    attributes:
+      label: Measurements, if taken
+      description: "Use the same scene/settings for original, image only, frame generation only and both. State FPS/1% low/latency, measurement method and any visual artifacts. Leave blank if not measured."

@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="420" viewBox="0 0 1280 420" role="img" aria-labelledby="title desc">
+  <title id="title">DLSS5-FrameGen — DLSS 5 meets Frame Generation</title>
+  <desc id="desc">Experimental community toolkit for RTX 20 and RTX 30. A diagram connects the image and frame generation layers to a shared workflow. This is a concept illustration, not gameplay or a benchmark.</desc>
+  <defs>
+    <pattern id="grid" width="32" height="32" patternUnits="userSpaceOnUse"><path d="M32 0H0V32" fill="none" stroke="#e6eddb" stroke-opacity=".045"/></pattern>
+  </defs>
+  <rect width="1280" height="420" rx="18" fill="#111511"/>
+  <rect width="1280" height="420" rx="18" fill="url(#grid)"/>
+  <path d="M48 44H80" stroke="#d3ff6a" stroke-width="5"/>
+  <text x="96" y="50" fill="#dce6d3" font-family="Consolas, monospace" font-size="16" letter-spacing="2">DLSS5-FRAMEGEN</text>
+  <rect x="1047" y="28" width="185" height="36" rx="18" fill="#222b1c" stroke="#52663c"/>
+  <text x="1139" y="51" text-anchor="middle" fill="#d3ff6a" font-family="Consolas, monospace" font-size="12" letter-spacing="1">DEVELOPER PREVIEW</text>
+  <text x="48" y="151" fill="#f1f4ea" font-family="'Avenir Next', 'Segoe UI', sans-serif" font-weight="900" font-size="76" letter-spacing="-3">DLSS 5.</text>
+  <text x="48" y="237" fill="#d3ff6a" font-family="'Avenir Next', 'Segoe UI', sans-serif" font-weight="900" font-size="76" letter-spacing="-3">MEET FRAME GEN.</text>
+  <text x="51" y="290" fill="#b5c0ad" font-family="'Helvetica Neue', sans-serif" font-size="23">Two rendering layers. One community workflow.</text>
+  <path d="M48 337H1232" stroke="#354130"/>
+  <text x="48" y="380" fill="#dce6d3" font-family="Consolas, monospace" font-size="16">TARGET: RTX 20 / RTX 30</text>
+  <text x="471" y="380" fill="#a5b399" font-family="Consolas, monospace" font-size="16">WINDOWS · OPEN SOURCE</text>
+  <text x="1232" y="380" text-anchor="end" fill="#a5b399" font-family="Consolas, monospace" font-size="13">INDEPENDENT / EXPERIMENTAL</text>
+  <g transform="translate(864 112)">
+    <rect x="30" y="0" width="270" height="70" rx="8" fill="#1d251a" stroke="#697b55"/>
+    <rect x="16" y="15" width="270" height="70" rx="8" fill="#1d251a" stroke="#a1b77d"/>
+    <rect x="0" y="30" width="270" height="70" rx="8" fill="#d3ff6a"/>
+    <text x="20" y="60" fill="#17200d" font-family="Consolas, monospace" font-size="11" letter-spacing="2">01 / IMAGE LAYER</text>
+    <text x="20" y="86" fill="#17200d" font-family="'Helvetica Neue', sans-serif" font-size="22" font-weight="700">DLSS5-Swapper</text>
+    <path d="M135 102V119" stroke="#d3ff6a" stroke-width="2"/>
+    <rect x="0" y="121" width="270" height="70" rx="8" fill="#20291b" stroke="#798d61"/>
+    <text x="20" y="148" fill="#a7bc8c" font-family="Consolas, monospace" font-size="11" letter-spacing="2">02 / FRAME GENERATION</text>
+    <text x="20" y="175" fill="#eef4e5" font-family="'Helvetica Neue', sans-serif" font-size="22" font-weight="700">dlssg_for_sm86</text>
+  </g>
+</svg>

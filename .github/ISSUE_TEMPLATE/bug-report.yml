@@ -1,0 +1,33 @@
+name: Bug report
+description: Report an installation, download, recovery or diagnostic problem.
+title: "[Bug] Short description"
+body:
+  - type: markdown
+    attributes:
+      value: "Please check docs/STATUS.md and existing issues first. Do not retry destructive operations on an original game folder to reproduce a bug."
+  - type: input
+    id: version
+    attributes:
+      label: Toolkit commit and environment
+      description: "Include OS, Python version and GPU/driver if relevant."
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Reproduction steps
+      description: "Exact command and minimal steps, preferably with temporary fake files. Redact private paths."
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected and actual behavior
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant output
+      description: "Remove credentials and personal information."
+      render: text
