@@ -23,7 +23,7 @@
   <a href="https://github.com/ztwzeroo/DLSS5-FrameGen/issues/new?template=game-test.yml"><img src="https://img.shields.io/badge/Share-a_game_test-354a30?style=for-the-badge&amp;labelColor=263021" alt="Share a game test"></a>
 </p>
 
-[Compatibility](#will-it-work-with-my-setup) · [FAQ](#frequently-asked-questions) · [Known issues](docs/STATUS.md) · [Contribute](CONTRIBUTING.md)
+[Compatibility](#will-it-work-with-my-setup) · [FAQ](#frequently-asked-questions) · [Known issues](docs/STATUS.md) · [Contribute](CONTRIBUTING.md) · [Changelog](CHANGELOG.md) · [Dev log](docs/devlog/2026-09-20.md)
 
 *Prebuilt Windows EXE and Linux binaries ship on the [Releases](../../releases) page — or run from source with Python 3.10+. No upstream DLLs are bundled; components are fetched and checksum-verified at install time.*
 
