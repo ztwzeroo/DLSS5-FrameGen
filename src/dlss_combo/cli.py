@@ -46,6 +46,12 @@ def _build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: list[str] | None = None) -> int:
+    # 冻结为 exe 后 Windows 控制台默认代码页不是 UTF-8，中文输出会炸
+    for stream in (sys.stdout, sys.stderr):
+        try:
+            stream.reconfigure(encoding="utf-8", errors="replace")
+        except (AttributeError, OSError):
+            pass
     try:
         args = _build_parser().parse_args(argv)
     except SystemExit as e:  # argparse 参数错误 → 退出码而非异常

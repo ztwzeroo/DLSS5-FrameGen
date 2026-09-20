@@ -1,0 +1,114 @@
+name: Release binaries
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            platform: windows-x64
+            binary: dlss-combo.exe
+          - os: ubuntu-latest
+            platform: linux-x64
+            binary: dlss-combo
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install package and tooling
+        run: |
+          pip install -e '.[dev]'
+          pip install pyinstaller
+      - name: Run tests before packaging
+        run: python -m pytest -q
+      - name: Build one-file binary
+        shell: bash
+        run: |
+          printf 'import sys\nfrom dlss_combo.cli import main\nsys.exit(main())\n' > build_entry.py
+          pyinstaller --onefile --name dlss-combo --noconfirm build_entry.py
+          test -f "dist/${{ matrix.binary }}"
+          "./dist/${{ matrix.binary }}" --version
+      - name: Package zip with checksum
+        shell: bash
+        run: |
+          tag="${GITHUB_REF_NAME:-dev}"
+          zip_name="dlss-combo-${tag}-${{ matrix.platform }}.zip"
+          bin="${{ matrix.binary }}"
+          if [ "${{ matrix.platform }}" = "linux-x64" ]; then
+            chmod +x "dist/$bin"
+          fi
+          if command -v zip >/dev/null 2>&1; then
+            (cd dist && zip "../$zip_name" "$bin")
+          else
+            powershell Compress-Archive -Path "dist/$bin" -DestinationPath "$zip_name"
+          fi
+          sha256sum "$zip_name" > "SHA256SUMS-${{ matrix.platform }}.txt"
+          cat "SHA256SUMS-${{ matrix.platform }}.txt"
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dlss-combo-${{ matrix.platform }}
+          path: |
+            dlss-combo-*.zip
+            SHA256SUMS-*.txt
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: [build]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist-artifacts
+          merge-multiple: true
+      - name: Merge checksums
+        run: cat dist-artifacts/SHA256SUMS-*.txt > dist-artifacts/SHA256SUMS.txt
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist-artifacts/*.zip
+            dist-artifacts/SHA256SUMS.txt
+          body: |
+            ## dlss-combo ${{ github.ref_name }}
+
+            ### Windows（无需 Python）
+            下载 `dlss-combo-${{ github.ref_name }}-windows-x64.zip`，解压得到
+            `dlss-combo.exe`：
+            ```bat
+            dlss-combo.exe fetch
+            dlss-combo.exe install "C:\Games\YourGame\Binaries\Win64" --arch sm86
+            dlss-combo.exe doctor "C:\Games\YourGame\Binaries\Win64"
+            ```
+
+            ### Linux（Steam Proton）
+            下载 `dlss-combo-${{ github.ref_name }}-linux-x64.zip`，解压并
+            `chmod +x dlss-combo`。游戏目录填 **Proton prefix 里**的 Windows 路径：
+            ```bash
+            ./dlss-combo fetch
+            GAMEPFX="$HOME/.steam/steam/steamapps/compatdata/<游戏AppID>/pfx/drive_c"
+            ./dlss-combo install "$GAMEPFX/…/Game/Binaries/Win64" --arch sm86
+            ```
+            Steam 启动选项（代理 DLL 覆盖 + NVAPI/CUDA 透传，参考 DLSS Unlocked
+            的 Linux 指引）：
+            ```
+            WINEDLLOVERRIDES="version=n,b" PROTON_ENABLE_NVAPI=1 PROTON_NVIDIA_NVCUDA=1 %command%
+            ```
+            > 代理名非 version.dll 时把 `version=n,b` 换成对应名字；
+            > 画质层（DLSS5-Swapper）是 Windows GUI 程序，Linux 下需经 Wine 运行，
+            > 上游自述 Linux 支持为实验性。
+
+            校验值见 `SHA256SUMS.txt`。未签名二进制首次运行可能触发
+            SmartScreen / 门禁提示，属常见信誉提示。
