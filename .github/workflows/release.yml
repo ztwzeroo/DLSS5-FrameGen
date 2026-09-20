@@ -80,7 +80,8 @@ jobs:
         id: glibc
         shell: bash
         run: |
-          FLOOR=$(objdump -T "dist/${{ matrix.binary }}" | grep -o 'GLIBC_[0-9.]*' | sort -V | tail -1 | cut -d_ -f2)
+          # 全文件扫描（含 PyInstaller 内嵌 .so），避免只看外层启动器漏掉真实下限
+          FLOOR=$(grep -ao 'GLIBC_[0-9.]*' "dist/${{ matrix.binary }}" | sort -Vu | tail -1 | cut -d_ -f2)
           echo "floor=$FLOOR" >> "$GITHUB_OUTPUT"
           echo "measured glibc symbol floor: $FLOOR"
       - name: Write build info and quickstart into package
@@ -201,9 +202,10 @@ jobs:
             ### Linux x86-64 — experimental
 
             `dlss-combo-${{ github.ref_name }}-linux-x64.zip`. Built on Ubuntu
-            22.04; requires glibc >= 2.35 (the measured symbol-version floor is
-            in the zip's `build-info.txt`; other distros unverified — or run
-            from source). For Steam games, find the real game folder via
+            22.04; the whole-binary GLIBC symbol floor is measured at build
+            time and ships in `build-info.txt` (current build: 2.14). Other
+            distros are unverified — glibc >= 2.17 (manylinux2014-era) is the
+            conservative recommendation, or run from source. For Steam games, find the real game folder via
             Steam → Manage → *Browse local files*, then target the folder
             containing the rendering EXE. Proton launch options some setups
             use (`WINEDLLOVERRIDES="version=n,b" PROTON_ENABLE_NVAPI=1

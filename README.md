@@ -154,7 +154,7 @@ WINEDLLOVERRIDES="version=n,b" PROTON_ENABLE_NVAPI=1 PROTON_NVIDIA_NVCUDA=1 %com
 > These options are community convention (the route [DLSS Unlocked](https://github.com/ShyVortex/DLSS-Unlocked) documents), **not verified with this toolkit** — check your Proton version's behavior against [Valve's config notes](https://github.com/ValveSoftware/Proton#runtime-config-options) before relying on them. Substitute the actual proxy name (`winmm`/`dbghelp`/…) if it is not `version.dll`.
 
 - The image layer (DLSS5-Swapper) is a Windows GUI app; running it via Wine is upstream-experimental — on Linux, validate the frame-generation layer first.
-- **Linux binaries require glibc >= 2.35** (built on Ubuntu 22.04; the measured symbol-version floor ships in each zip's `build-info.txt`; other distros unverified — or run from source).
+- **Linux binaries**: built on Ubuntu 22.04; the whole-binary GLIBC symbol floor is measured per build (current: 2.14, in each zip's `build-info.txt`). Other distros are unverified — glibc >= 2.17 (manylinux2014-era) is the conservative recommendation, or run from source.
 
 ## What has actually been tested?
 

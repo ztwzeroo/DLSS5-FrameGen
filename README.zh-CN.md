@@ -21,7 +21,8 @@ Windows EXE 与 Linux x64 二进制（GitHub Actions 从打 tag 的提交构建�
 
 > Linux/Steam Proton（实验性）：用 Steam“浏览本地文件”定位含渲染 EXE 的实际目录；
 > 启动选项 `WINEDLLOVERRIDES="version=n,b" PROTON_ENABLE_NVAPI=1 …` 为社区惯例、未经本组合实测。
-> Linux 包需 glibc ≥ 2.35（Ubuntu 22.04 构建，实测下限见包内 build-info.txt）。
+> Linux 包由 Ubuntu 22.04 构建，全文件 GLIBC 符号下限按构建实测（当前 2.14，见包内 build-info.txt）；
+> 其他发行版未验证，保守建议 glibc ≥ 2.17，或直接源码运行。
 
 [How it works / 工作原理](#how-it-works--工作原理) · [Getting started / 开始使用](#getting-started--开始使用) · [Known issues / 已知问题](docs/reviews/2026-09-20-project-review.md) · [Report results / 反馈实测](https://github.com/ztwzeroo/DLSS5-FrameGen/issues)
 
