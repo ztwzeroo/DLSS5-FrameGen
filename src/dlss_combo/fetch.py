@@ -7,6 +7,8 @@ import hashlib
 import json
 import os
 import re
+import shutil
+import tempfile
 import urllib.request
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -103,23 +105,43 @@ def fetch_kit(
         )
 
     commit = _resolve_commit(fetch_bytes)
-    for repo_path, kit_rel in mapping.items():
-        target = kit_dir / kit_rel
-        target.parent.mkdir(parents=True, exist_ok=True)
-        data = fetch_bytes(f"{RAW_BASE}/{commit}/{repo_path}")
-        part = target.with_name(target.name + ".part")
-        part.write_bytes(data)
-        os.replace(part, target)
-        files_meta[kit_rel] = hashlib.sha256(data).hexdigest()
+    # R7：先全部下载进独立 staging，校验齐全后原子切换——
+    # 中断/失败时旧 kit 保持完好（离线回退能力不丢）
+    staging = kit_dir / ".staging"
+    if staging.exists():
+        shutil.rmtree(staging)
+    staging.mkdir(parents=True)
+    staged: dict[str, str] = {}
+    try:
+        for repo_path, kit_rel in mapping.items():
+            target = staging / kit_rel
+            target.parent.mkdir(parents=True, exist_ok=True)
+            data = fetch_bytes(f"{RAW_BASE}/{commit}/{repo_path}")
+            target.write_bytes(data)
+            staged[kit_rel] = hashlib.sha256(data).hexdigest()
+        # 全部就位 → 逐文件原子切换（文件各自完整，元数据最后提交）
+        for kit_rel in mapping.values():
+            final = kit_dir / kit_rel
+            final.parent.mkdir(parents=True, exist_ok=True)
+            os.replace(staging / kit_rel, final)
+            files_meta[kit_rel] = staged[kit_rel]
+    finally:
+        shutil.rmtree(staging, ignore_errors=True)
 
     # 从现有 meta 出发更新，保留 swapper 与其他运行库的记录（审查 F）
     meta.setdefault("version", 1)
     meta["dlssg_commits"] = {**commits, runtime: commit}
     meta["fetched_at"] = datetime.now(timezone.utc).isoformat()
     meta["files"] = files_meta
-    tmp = kit_dir / (KIT_JSON + ".dlsscombo-tmp")
-    tmp.write_text(json.dumps(meta, ensure_ascii=False, indent=2), encoding="utf-8")
-    os.replace(tmp, kit_dir / KIT_JSON)
+    fd, tmp_name = tempfile.mkstemp(prefix=".dlsscombo-", suffix=".tmp", dir=str(kit_dir))
+    tmp = Path(tmp_name)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as fh:
+            fh.write(json.dumps(meta, ensure_ascii=False, indent=2))
+        os.replace(tmp, kit_dir / KIT_JSON)
+    except BaseException:
+        tmp.unlink(missing_ok=True)
+        raise
     return KitInfo(root=kit_dir / "dlssg" / runtime, dlssg_commit=commit, sha256=files_meta)
 
 
@@ -187,9 +209,15 @@ def fetch_swapper(
 
     swapper_dir.mkdir(parents=True, exist_ok=True)
     zip_path = swapper_dir / portable_name
-    part = zip_path.with_name(zip_path.name + ".part")
-    part.write_bytes(blob)
-    os.replace(part, zip_path)
+    fd, part_name = tempfile.mkstemp(prefix=".dlsscombo-", suffix=".part", dir=str(swapper_dir))
+    part = Path(part_name)
+    try:
+        with os.fdopen(fd, "wb") as fh:
+            fh.write(blob)
+        os.replace(part, zip_path)
+    except BaseException:
+        part.unlink(missing_ok=True)
+        raise
 
     swapper_meta = {
         "tag": release.get("tag_name", ""),
@@ -199,9 +227,15 @@ def fetch_swapper(
     }
     meta.setdefault("version", 1)
     meta["swapper"] = swapper_meta
-    tmp = kit_dir / (KIT_JSON + ".dlsscombo-tmp")
-    tmp.write_text(json.dumps(meta, ensure_ascii=False, indent=2), encoding="utf-8")
-    os.replace(tmp, kit_dir / KIT_JSON)
+    fd, tmp_name = tempfile.mkstemp(prefix=".dlsscombo-", suffix=".tmp", dir=str(kit_dir))
+    tmp = Path(tmp_name)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as fh:
+            fh.write(json.dumps(meta, ensure_ascii=False, indent=2))
+        os.replace(tmp, kit_dir / KIT_JSON)
+    except BaseException:
+        tmp.unlink(missing_ok=True)
+        raise
     return SwapperInfo(tag=release.get("tag_name", ""), zip_path=zip_path)
 
 

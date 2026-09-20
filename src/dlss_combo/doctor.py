@@ -65,26 +65,37 @@ def doctor(game_dir: Path) -> DoctorReport:
     rep = DoctorReport()
     log_dir = game_dir / "dlssg_sm86" / "logs"
 
-    # 1. 插帧路由是否生效：跨日志取最新（mtime 降序），日志内取最后一条
+    # 1. 插帧路由是否生效：诊断范围=最新一份日志；更早日志只作历史参考（R6）
     source_log: Path | None = None
+    historical: list[tuple[str, bool]] = []
     if log_dir.is_dir():
         logs = sorted(log_dir.glob("backend_*.jsonl"), key=lambda p: p.stat().st_mtime, reverse=True)
-        for log in logs:
+        for idx, log in enumerate(logs):
             result = _parse_route_active(log.read_text(encoding="utf-8", errors="replace"))
-            if result is not None:
-                rep.route_active = result
-                source_log = log
-                break
+            if idx == 0:
+                if result is not None:
+                    rep.route_active = result
+                    source_log = log
+            elif result is not None:
+                historical.append((log.name, result))
     if rep.route_active is True:
-        rep.lines.append(f"OK: dlssg 插帧路由已生效（{source_log.name if source_log else '日志'} route active=true）")
+        rep.lines.append(f"OK: dlssg 插帧路由已生效（最新日志 {source_log.name if source_log else ''} route active=true）")
     elif rep.route_active is False:
         rep.lines.append(
-            "问题: backend 日志显示 route active=false——驱动/运行库未匹配，"
+            "问题: 最新 backend 日志显示 route active=false——驱动/运行库未匹配，"
             "把 ini 的 [Logging] Level 提到 2 后重开游戏复现"
         )
         rep.problems.append("route active=false")
     else:
-        rep.lines.append("未找到 route 记录：日志在 dlssg_sm86/logs/（先跑一局游戏生成 backend_*.jsonl）")
+        rep.lines.append(
+            "未验证：最新日志没有 route 事件（本次会话未确认生效）；"
+            "日志在 dlssg_sm86/logs/，先跑一局游戏再查"
+        )
+    for name, active in historical:
+        rep.lines.append(
+            f"历史参考: 更早的 {name} 曾报告 route active={'true' if active else 'false'}"
+            "（不代表本次会话）"
+        )
 
     # 2. 代理冲突
     proxies = sorted(scan.existing_proxies)

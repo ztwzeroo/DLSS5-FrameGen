@@ -78,7 +78,7 @@ Use an independently backed-up or disposable game copy. Uninstall validates its 
 
 ```powershell
 .\dlss-combo.exe fetch
-.\dlss-combo.exe install "C:/Games/TestCopy/Binaries/Win64" --mfg 4x
+.\dlss-combo.exe install "C:/Games/TestCopy/Binaries/Win64"
 ```
 
 **From source:** [download the source ZIP](https://github.com/ztwzeroo/DLSS5-FrameGen/archive/refs/heads/main.zip), extract it, and open PowerShell in the extracted folder. Then run:
@@ -137,11 +137,11 @@ Use `py -m dlss_combo --help` or `py -m dlss_combo install --help` for the full 
 
 ## Linux / Steam Proton
 
-Windows games running through Proton are still Windows processes, so the frame-generation layer is expected to apply the same way — **not yet verified end-to-end by this project on Linux**. Grab `dlss-combo-<version>-linux-x64.zip`, then point the CLI at the folder containing the game's **rendering EXE**. The reliable way to find it is Steam → *Manage* → **Browse local files** (for Proton installs that lands you inside the prefix's `drive_c`; don't assume a fixed prefix layout — always locate the actual EXE folder):
+Windows games running through Proton are still Windows processes, so the frame-generation layer is expected to apply the same way — **not yet verified end-to-end by this project on Linux**. Grab `dlss-combo-<version>-linux-x64.zip`, then point the CLI at the folder containing the game's **rendering EXE**. The reliable way to find it is Steam → *Manage* → **Browse local files** (Proton installs often live under the prefix's `drive_c`, but the layout is not guaranteed — the Browse-local-files location is the reliable reference):
 
 ```bash
 chmod +x dlss-combo
-./dlss-combo install "/path/to/Game/Binaries/Win64" --arch sm86
+./dlss-combo install "/path/to/Game/Binaries/Win64"
 ```
 
 Some setups add Steam launch options so Wine loads the proxy and Proton exposes
@@ -154,7 +154,7 @@ WINEDLLOVERRIDES="version=n,b" PROTON_ENABLE_NVAPI=1 PROTON_NVIDIA_NVCUDA=1 %com
 > These options are community convention (the route [DLSS Unlocked](https://github.com/ShyVortex/DLSS-Unlocked) documents), **not verified with this toolkit** — check your Proton version's behavior against [Valve's config notes](https://github.com/ValveSoftware/Proton#runtime-config-options) before relying on them. Substitute the actual proxy name (`winmm`/`dbghelp`/…) if it is not `version.dll`.
 
 - The image layer (DLSS5-Swapper) is a Windows GUI app; running it via Wine is upstream-experimental — on Linux, validate the frame-generation layer first.
-- **Linux binaries**: built on Ubuntu 22.04; the whole-binary GLIBC symbol floor is measured per build (current: 2.14, in each zip's `build-info.txt`). Other distros are unverified — glibc >= 2.17 (manylinux2014-era) is the conservative recommendation, or run from source.
+- **Linux binaries require glibc >= 2.35** — the real floor is measured per build by extracting the embedded ELF libraries from the PyInstaller archive (an outer-file string scan under-reports it; the current build's floor is in each zip's `build-info.txt`). Other distros are unverified; to target older systems, run from source.
 
 ## What has actually been tested?
 

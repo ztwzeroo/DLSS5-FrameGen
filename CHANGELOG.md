@@ -5,6 +5,41 @@ All notable changes to this project are documented here. The format follows
 [SemVer](https://semver.org/) with a `0.x` experimental prefix. Evidence links
 point to files in this repository (`docs/`) so the trail is auditable offline.
 
+## [0.1.2] — 2026-09-20
+
+### Fixed (independent v0.1.1 review, R1–R7)
+
+- **R1**: first-install failures now restore the user's original INI at every
+  failure point (DLL copy, manifest write, backup write; reinstall failures
+  restore the previous working state). Covered by fault-injection tests in
+  `tests/test_review4.py`.
+- **R2**: uninstall never overwrites any existing file or symlink when saving
+  a restore copy — copies are created exclusively (`O_CREAT|O_EXCL`) with
+  numbered fallback names (`*.pre-existing.1`, …).
+- **R3**: temporary files use random, exclusively-created names
+  (`tempfile.mkstemp`, same directory) — predictable-name symlink attacks are
+  inert — and cleanup touches only paths registered by the current operation.
+- **R4**: the Linux glibc floor is now measured by extracting the embedded
+  ELF libraries from the PyInstaller CArchive and parsing their
+  `.gnu.version_r` requirements (outer-file string scans under-report);
+  docs state the real floor (**glibc >= 2.35**, from the embedded
+  libpython3.13) and the release notes read the measured value per build.
+- **R5**: a missing or corrupted pre-existing backup aborts uninstall before
+  any deletion (backups now record a SHA256 that is verified when present).
+- **R6**: doctor treats the newest log as the diagnostic scope; a newer
+  session without route events reports "未验证/unverified" while older
+  route events are labelled historical.
+- **R7**: kit refreshes download into a staging directory and switch only
+  after every file is fetched — an interrupted refresh leaves the previous
+  kit fully valid (offline fallback preserved).
+
+The eight reproduced scenarios from
+[`docs/reviews/2026-09-20-v0.1.1-independent-repro.py`](docs/reviews/2026-09-20-v0.1.1-independent-repro.py)
+all assert fixed, and are migrated into formal regressions
+(`tests/test_review4.py`). Docs consistency: STATUS links/counts, README
+quick-start no longer forces `--arch` (auto-detection first), Linux
+requirements updated.
+
 ## [0.1.1] — 2026-09-20
 
 ### Fixed
@@ -84,5 +119,6 @@ The nine reproduced problem behaviors are pinned by
 `docs/reviews/2026-09-20-repro.py` (all report fixed) and migrated into
 regression tests (`tests/test_review2.py`).
 
+[0.1.2]: https://github.com/ztwzeroo/DLSS5-FrameGen/releases/tag/v0.1.2
 [0.1.1]: https://github.com/ztwzeroo/DLSS5-FrameGen/releases/tag/v0.1.1
 [0.1.0]: https://github.com/ztwzeroo/DLSS5-FrameGen/releases/tag/v0.1.0

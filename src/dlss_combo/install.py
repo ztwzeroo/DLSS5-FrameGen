@@ -8,6 +8,7 @@
 import json
 import os
 import shutil
+import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -42,16 +43,27 @@ def _kit_commit(kit_dir: Path, runtime: str) -> str:
     return commits.get(runtime) or data.get("dlssg_commit", "unknown")
 
 
-def _atomic_copy(src: Path, dst: Path) -> None:
-    tmp = dst.with_name(dst.name + ".dlsscombo-tmp")
+def _staged_temp(target: Path) -> Path:
+    """同目录随机排他创建的临时文件（mkstemp=O_CREAT|O_EXCL，符号链接无法预占）。"""
+    fd, name = tempfile.mkstemp(prefix=".dlsscombo-", suffix=".tmp", dir=str(target.parent))
+    os.close(fd)
+    return Path(name)
+
+
+def _atomic_copy(src: Path, dst: Path, temps: set[Path]) -> None:
+    tmp = _staged_temp(dst)
+    temps.add(tmp)
     shutil.copy2(src, tmp)
     os.replace(tmp, dst)
+    temps.discard(tmp)
 
 
-def _atomic_write_text(dst: Path, text: str) -> None:
-    tmp = dst.with_name(dst.name + ".dlsscombo-tmp")
+def _atomic_write_text(dst: Path, text: str, temps: set[Path]) -> None:
+    tmp = _staged_temp(dst)
+    temps.add(tmp)
     tmp.write_text(text, encoding="utf-8", newline="\n")
     os.replace(tmp, dst)
+    temps.discard(tmp)
 
 
 def install(
@@ -149,6 +161,8 @@ def install(
 
     created: list[Path] = []
     deleted: list[tuple[Path, Path]] = []  # (原路径, 备份路径)
+    overwrote: list[tuple[Path, Path]] = []  # 本次覆盖的预存文件 (目标, 安装前备份)
+    temps: set[Path] = set()  # 仅本操作登记的临时文件
     try:
         for entry in truly_ours:
             p = game_dir / entry["path"]
@@ -167,8 +181,10 @@ def install(
             )
 
         # 首次安装：用户已有的 INI 先备份为 pre-existing（卸载时还原）
-        # 备份名与 ours-history（*.bak）分开，避免重装时覆盖用户原件
+        # 备份名与 ours-history（*.bak）分开，避免重装时覆盖用户原件；
+        # 覆盖行为纳入回滚事务：后续任一步失败都从这份备份还原用户原件
         ini_path = game_dir / INI_NAME
+        pre_backup: Path | None = None
         if ini_path.is_file() and not any(
             b.get("original") == INI_NAME
             and b.get("kind", "pre-existing") == "pre-existing"
@@ -179,9 +195,15 @@ def install(
                 backup_dir.mkdir(parents=True, exist_ok=True)
                 saved = backup_dir / f"{INI_NAME}.pre.bak"
                 shutil.copy2(ini_path, saved)
+                pre_backup = saved
                 new_manifest.record_backup(
-                    INI_NAME, str(saved.relative_to(game_dir)), kind="pre-existing"
+                    INI_NAME,
+                    str(saved.relative_to(game_dir)),
+                    kind="pre-existing",
+                    sha256=new_manifest.sha256_of(saved),
                 )
+        if pre_backup is not None:
+            overwrote.append((ini_path, pre_backup))
 
         # 5. 原子落盘
         # INI 被外部修改（或曾被外部修改并标记）→ 保留用户版本，不再写入
@@ -195,7 +217,7 @@ def install(
             )
             new_manifest.dlssg["ini_user_managed"] = True
         else:
-            _atomic_write_text(ini_path, build_ini(tier=tier, mfg=mfg))
+            _atomic_write_text(ini_path, build_ini(tier=tier, mfg=mfg), temps)
             created.append(ini_path)
             new_manifest.record_file(
                 INI_NAME, new_manifest.sha256_of(ini_path), origin="kit"
@@ -206,24 +228,22 @@ def install(
             else kit_root / "alternatives" / choice.name
         )
         dst = game_dir / choice.name
-        _atomic_copy(src, dst)
+        _atomic_copy(src, dst, temps)
         created.append(dst)
         new_manifest.record_file(choice.name, new_manifest.sha256_of(dst), origin="kit")
         new_manifest.save(game_dir)
     except Exception:
         for p in created:
             p.unlink(missing_ok=True)
-        for t in list(game_dir.glob("*.dlsscombo-tmp")) + list(
-            (game_dir / MANIFEST_DIR).glob("*.dlsscombo-tmp")
-        ):
+        for t in temps:  # 只清理本操作登记的临时文件（R3：绝不碰无关同名后缀）
             t.unlink(missing_ok=True)
         for original, backup in deleted:
             if not original.exists() or original.read_bytes() != backup.read_bytes():
                 shutil.copy2(backup, original)
+        for target, backup in overwrote:  # R1：首次覆盖的用户原件从预存备份还原
+            shutil.copy2(backup, target)
         raise
-    for t in list(game_dir.glob("*.dlsscombo-tmp")) + list(
-        (game_dir / MANIFEST_DIR).glob("*.dlsscombo-tmp")
-    ):
+    for t in temps:
         t.unlink(missing_ok=True)
 
     # 6. 验证 + 画质层状态 + 指引

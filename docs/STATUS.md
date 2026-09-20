@@ -4,16 +4,20 @@
 
 **This is an experimental source preview, not a stable installer.** It is intended for contributors and experienced modders working on disposable directories or independently backed-up game copies.
 
-This page describes the tree after the 2026-09-20 review fixes landed (see [the review](2026-09-20-project-review.md) and [repro script](2026-09-20-repro.py); all nine reproduced behaviors now assert fixed). In-game behavior remains unverified.
+This page describes the tree after the 2026-09-20 review fixes landed (see [the review](reviews/2026-09-20-project-review.md) and [repro script](reviews/2026-09-20-repro.py), plus the [v0.1.1 independent review](reviews/2026-09-20-v0.1.1-independent-review.md) and its [repro](reviews/2026-09-20-v0.1.1-independent-repro.py) — all seventeen reproduced behaviors now assert fixed). In-game behavior remains unverified.
 
 ## Evidence so far
 
-- 107 offline Python tests pass; CI runs them on Windows/Linux/macOS on every push.
+- 122 offline Python tests pass; CI runs them on Windows/Linux/macOS on every push.
 - A Python wheel builds, and an isolated CLI version check succeeds.
 - The nine reproduced problem behaviors from the 2026-09-20 review are fixed and covered by regression tests; the repro script reports all nine as fixed.
 - No Windows/NVIDIA game session, image-quality comparison, latency test or FPS benchmark has been validated by this project.
 
 Upstream support claims and configuration limits are not a substitute for testing the combined setup. A `4x` or `6x` setting is a frame-generation ceiling, not a measured performance improvement.
+
+## Fixed in v0.1.2 (independent v0.1.1 review, R1–R7)
+
+First-install rollback now restores the user's original INI at every failure point (DLL/manifest/backup write); uninstall never overwrites any existing file or symlink when saving a restore copy (exclusive `O_CREAT|O_EXCL` with numbered fallbacks); temp files are random and exclusively created, and only paths registered by the current operation are cleaned; a missing or corrupted pre-existing backup aborts uninstall before any deletion; doctor treats the newest log as the diagnostic scope and labels older route events as historical; interrupted kit refreshes stage and switch atomically, leaving the previous kit usable. Evidence: `tests/test_review4.py` and the flipped independent repro script (all eight scenarios fixed). The glibc floor is now measured from the CArchive-extracted embedded ELF libraries (see the release workflow).
 
 ## Known issues
 
@@ -55,6 +59,6 @@ The project targets Windows 10/11 x64, RTX 20/30, and D3D12 games with native DL
 
 Prioritize bounded filesystem operations, ownership checks, original-file restoration, strict checksums, and failure recovery. Regression tests should assert that unrelated files remain byte-for-byte unchanged.
 
-The [detailed audit (Chinese)](reviews/2026-09-20-project-review.md) includes file locations, reproduction results and acceptance criteria. The [reproduction script](reviews/2026-09-20-repro.py) uses temporary files and does not launch real binaries. **Its successful completion means the known bugs are reproducible, not that the tool is safe.**
+The [detailed audit (Chinese)](reviews/2026-09-20-project-review.md) includes file locations, reproduction results and acceptance criteria. The [reproduction script](reviews/2026-09-20-repro.py) uses temporary files and does not launch real binaries. **Since v0.1.2 both scripts assert the FIXED behavior: successful completion means the reproduced defects no longer trigger — a specific regression guard, not proof that all file-safety concerns are resolved.**
 
 For real game reports, use the [game-test form](https://github.com/ztwzeroo/DLSS5-FrameGen/issues/new?template=game-test.yml). Include unsuccessful attempts and clearly label what you did and did not measure.

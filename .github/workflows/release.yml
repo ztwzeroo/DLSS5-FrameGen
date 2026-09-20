@@ -75,15 +75,50 @@ jobs:
           test ! -e "$SGAME/version.dll" && test ! -e "$SGAME/dlssg_sm86.ini"
           test -f "$SGAME/game.exe"
           echo "packaged binary smoke OK"
-      - name: Measure glibc requirement (linux)
+      - name: Measure real glibc floor (extract embedded ELF libs)
         if: matrix.platform == 'linux-x64'
         id: glibc
         shell: bash
         run: |
-          # 全文件扫描（含 PyInstaller 内嵌 .so），避免只看外层启动器漏掉真实下限
-          FLOOR=$(grep -ao 'GLIBC_[0-9.]*' "dist/${{ matrix.binary }}" | sort -Vu | tail -1 | cut -d_ -f2)
-          echo "floor=$FLOOR" >> "$GITHUB_OUTPUT"
-          echo "measured glibc symbol floor: $FLOOR"
+          set -e
+          python - <<'PY'
+          # 单文件程序内嵌的 .so 是 zlib 压缩的，外层字符串扫描会漏报真实下限
+          # （v0.1.1 独立复核 R4）。解包 CArchive、解析每个内嵌 ELF 的动态符号版本。
+          import glob, os, re, subprocess, sys, tempfile
+          from PyInstaller.archive.readers import CArchiveReader
+
+          app = "dist/dlss-combo"
+
+          def glibc_max(path):
+              out = subprocess.run(
+                  ["objdump", "-T", path], capture_output=True, text=True
+              ).stdout
+              best = (0, 0)
+              for m in re.finditer(r"GLIBC_(\d+)\.(\d+)", out):
+                  best = max(best, (int(m.group(1)), int(m.group(2))))
+              return best
+
+          overall = glibc_max(app)  # 外层启动器
+          with tempfile.TemporaryDirectory() as td:
+              reader = CArchiveReader(app)
+              for name in list(reader.toc.keys()):
+                  try:
+                      reader.extract(name, td)
+                  except Exception:
+                      continue
+              for p in glob.glob(os.path.join(td, "**"), recursive=True):
+                  if os.path.isfile(p):
+                      with open(p, "rb") as fh:
+                          if fh.read(4) == b"\x7fELF":
+                              overall = max(overall, glibc_max(p))
+          if overall == (0, 0):
+              sys.exit("no GLIBC version references found - measurement failed")
+          floor = f"{overall[0]}.{overall[1]}"
+          print("measured real glibc floor (CArchive-extracted ELF .gnu.version_r):", floor)
+          with open("glibc_floor.txt", "w") as fh:
+              fh.write(floor)
+          PY
+          echo "floor=$(cat glibc_floor.txt)" >> "$GITHUB_OUTPUT"
       - name: Write build info and quickstart into package
         shell: bash
         run: |
@@ -164,6 +199,10 @@ jobs:
           merge-multiple: true
       - name: Merge checksums
         run: cat dist-artifacts/SHA256SUMS-*.txt > dist-artifacts/SHA256SUMS.txt
+      - name: Read measured glibc floor
+        run: |
+          FLOOR=$(grep -o 'GLIBC_[0-9.]*' dist-artifacts/build-info.txt | head -1 | cut -d_ -f2-)
+          echo "GLIBC_FLOOR=${FLOOR:-unknown}" >> "$GITHUB_ENV"
       - name: Create GitHub Release (pre-release)
         uses: softprops/action-gh-release@v2
         with:
@@ -202,10 +241,10 @@ jobs:
             ### Linux x86-64 — experimental
 
             `dlss-combo-${{ github.ref_name }}-linux-x64.zip`. Built on Ubuntu
-            22.04; the whole-binary GLIBC symbol floor is measured at build
-            time and ships in `build-info.txt` (current build: 2.14). Other
-            distros are unverified — glibc >= 2.17 (manylinux2014-era) is the
-            conservative recommendation, or run from source. For Steam games, find the real game folder via
+            22.04. The real glibc floor is measured at build time by extracting
+            the embedded ELF libraries from the PyInstaller archive (outer-file
+            string scans under-report); this build: **glibc >= ${{ env.GLIBC_FLOOR }}**
+            (see `build-info.txt`). Other distros are unverified — or run from source. For Steam games, find the real game folder via
             Steam → Manage → *Browse local files*, then target the folder
             containing the rendering EXE. Proton launch options some setups
             use (`WINEDLLOVERRIDES="version=n,b" PROTON_ENABLE_NVAPI=1

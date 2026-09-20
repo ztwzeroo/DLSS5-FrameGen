@@ -11,6 +11,7 @@ import hashlib
 import json
 import os
 import re
+import tempfile
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
@@ -65,31 +66,46 @@ class Manifest:
         self.files = [f for f in self.files if f["path"] != path]
         self.files.append({"path": path, "sha256": sha256, "origin": origin})
 
-    def record_backup(self, original: str, saved_to: str, kind: str = "pre-existing") -> None:
-        self.backups.append({"original": original, "saved_to": saved_to, "kind": kind})
+    def record_backup(
+        self,
+        original: str,
+        saved_to: str,
+        kind: str = "pre-existing",
+        sha256: str | None = None,
+    ) -> None:
+        entry: dict = {"original": original, "saved_to": saved_to, "kind": kind}
+        if sha256:
+            entry["sha256"] = sha256
+        self.backups.append(entry)
 
     def save(self, game_dir: Path) -> Path:
         """原子写入：先写临时文件再 os.replace，失败不破坏旧清单。"""
         target_dir = game_dir / MANIFEST_DIR
         target_dir.mkdir(parents=True, exist_ok=True)
         target = target_dir / MANIFEST_NAME
-        tmp = target.with_name(MANIFEST_NAME + ".dlsscombo-tmp")
-        tmp.write_text(
-            json.dumps(
-                {
-                    "version": self.version,
-                    "created": self.created,
-                    "dlss_combo_version": self.dlss_combo_version,
-                    "dlssg": self.dlssg,
-                    "files": self.files,
-                    "backups": self.backups,
-                },
-                ensure_ascii=False,
-                indent=2,
-            ),
-            encoding="utf-8",
+        payload = json.dumps(
+            {
+                "version": self.version,
+                "created": self.created,
+                "dlss_combo_version": self.dlss_combo_version,
+                "dlssg": self.dlssg,
+                "files": self.files,
+                "backups": self.backups,
+            },
+            ensure_ascii=False,
+            indent=2,
         )
-        os.replace(tmp, target)
+        fd, name = tempfile.mkstemp(
+            prefix=".dlsscombo-", suffix=".tmp", dir=str(target_dir)
+        )
+        tmp = Path(name)
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8", newline="\n") as fh:
+                fh.write(payload)
+            os.replace(tmp, target)
+        except BaseException:
+            tmp.unlink(missing_ok=True)
+            raise
         return target
 
     @classmethod

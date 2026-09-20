@@ -175,7 +175,7 @@ def test_partial_copy_failure_leaves_old_dll_intact(tmp_path: Path, monkeypatch)
     real_copy = install_mod.shutil.copy2
 
     def broken_copy(src, dst, *a, **kw):
-        if str(src).endswith("version.dll") and str(dst).endswith(".dlsscombo-tmp"):
+        if str(src).endswith("version.dll") and ".dlsscombo-" in str(dst):
             Path(dst).write_bytes(b"PARTIAL")
             raise OSError("disk full mid-copy")
         return real_copy(src, dst, *a, **kw)
