@@ -17,6 +17,8 @@
 
 > **Developer preview.** Best suited to contributors and experienced modders using disposable test copies. The file-safety, rollback and checksum issues from the [2026-09-20 review](docs/reviews/2026-09-20-project-review.md) are fixed and pinned by regression tests (the review's repro script now reports all nine behaviors fixed). No verified in-game benchmarks yet. **Read the [current limitations](docs/STATUS.md) before installing.**
 
+**Have an RTX 20/30 and a single-player D3D12 game with native frame-generation support?** We are looking for early testers. [Download the Windows developer preview](../../releases/latest), try it on a backed-up test copy, and [share a success or failure report](https://github.com/ztwzeroo/DLSS5-FrameGen/issues/new?template=game-test.yml). We have not yet verified the combined setup in a real Windows game; your report helps establish which configurations actually work.
+
 <p>
   <a href="../../releases"><img src="https://img.shields.io/badge/Download-Releases_(exe_/_linux)-d3ff6a?style=for-the-badge&amp;labelColor=263021" alt="Download from Releases"></a>
   <a href="#get-started"><img src="https://img.shields.io/badge/Read-setup_guide-354a30?style=for-the-badge&amp;labelColor=263021" alt="Read setup guide"></a>
@@ -160,7 +162,7 @@ WINEDLLOVERRIDES="version=n,b" PROTON_ENABLE_NVAPI=1 PROTON_NVIDIA_NVCUDA=1 %com
 
 | Evidence | Current state |
 |---|---|
-| Offline Python tests | 107 passing; CI runs the suite on Windows/Linux/macOS on every push |
+| Offline Python tests | 122 passing at v0.1.3; CI runs the suite on Windows/Linux/macOS on every push |
 | Review regression | The 2026-09-20 repro script reports all nine fixed behaviors |
 | Release binaries | Windows EXE + Linux x64 built by GitHub Actions from each tagged commit |
 | Windows game sessions | Not yet validated by this project |
@@ -174,9 +176,9 @@ We welcome negative results as well as successful runs. A useful comparison uses
 ## Frequently asked questions
 
 <details>
-<summary><strong>Is there a one-click Windows EXE?</strong></summary>
+<summary><strong>Is there a Windows EXE? Is it a GUI?</strong></summary>
 
-Yes — [Releases](../../releases) carries a prebuilt `dlss-combo.exe` (Windows x64) and a Linux x64 binary, built by GitHub Actions from the tagged commit. They are unsigned, so SmartScreen may show a reputation prompt. The upstream Swapper portable EXE is a separate application.
+Yes — [Releases](../../releases/latest) carries a prebuilt `dlss-combo.exe` (Windows x64) and a Linux x64 binary, built by GitHub Actions from the tagged commit. This is a command-line tool, not a graphical installer. The binaries are unsigned, so SmartScreen may show a reputation prompt. The upstream Swapper portable EXE is a separate application.
 
 </details>
 
@@ -210,9 +212,9 @@ We will add them when reproducible Windows/NVIDIA tests are available. The banne
 
 ## Where we're headed
 
-- [ ] Protect externally modified files and restore original configurations.
-- [ ] Make checksum validation and interrupted-install recovery reliable.
-- [ ] Add installation previews and accurate per-session diagnostics.
+- [x] Add regression protection for externally modified files and original configuration recovery.
+- [x] Re-verify cached files and keep the previous kit usable if refresh fails.
+- [ ] Add an installation preview and improve per-session diagnostics with real game evidence.
 - [ ] Add English CLI messages and clearer error guidance.
 - [ ] Validate Windows behavior and publish reproducible RTX 20/30 game results.
 
@@ -223,6 +225,6 @@ See the [English status and known issues](docs/STATUS.md), [detailed audit (Chin
 **[DLSS5-Swapper](https://github.com/rakanki911/DLSS5-Swapper)** — image-layer installation routes and component management.
 **[dlssg_for_sm86](https://github.com/sdli1995/dlssg_for_sm86)** — the DLSS-G proxy and frame-generation implementation.
 
-Please support the upstream maintainers. This repository does not modify, rebuild or redistribute their binaries; `fetch` downloads components from upstream. Downloads currently have the validation limitations described above.
+Please support the upstream maintainers. This repository does not modify, rebuild or redistribute their binaries; `fetch` downloads components from upstream. Self-recorded hashes check local integrity but do not authenticate upstream assets unless upstream checksums are available.
 
 [MIT licensed](LICENSE). Independent community project, not affiliated with or endorsed by NVIDIA or either upstream project. DLSS and RTX are NVIDIA trademarks.
