@@ -7,6 +7,7 @@ import json
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from .gpu import choose_gpu, detect_all_gpus
 from .manifest import Manifest
 from .scan import GameScan, scan_game_dir
 
@@ -122,6 +123,17 @@ def doctor(game_dir: Path) -> DoctorReport:
         rep.lines.append(
             f"历史参考: 更早的 {name} 曾报告 route active={'true' if active else 'false'}"
             "（不代表本次会话）"
+        )
+
+    # 0. GPU landscape（多 NVIDIA 卡时列出全部，明确主卡与 --arch 覆盖）
+    gpus = detect_all_gpus()
+    nvidia = [g for g in gpus if g.vendor == "nvidia"]
+    if len(nvidia) > 1:
+        primary = choose_gpu(gpus)
+        names = ", ".join(g.name for g in nvidia)
+        rep.lines.append(
+            f"note: multiple NVIDIA GPUs detected ({names}); using {primary.name or primary.arch} "
+            "— pass --arch to override"
         )
 
     # 2. 代理冲突
