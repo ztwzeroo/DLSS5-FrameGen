@@ -42,6 +42,10 @@ def _build_parser() -> argparse.ArgumentParser:
 
     pd = sub.add_parser("doctor", help="只读体检：路由日志、冲突、画质层")
     pd.add_argument("game_dir", type=Path)
+
+    pr = sub.add_parser("report", help="print a paste-ready markdown report for the game-test issue")
+    pr.add_argument("game_dir", type=Path)
+    pr.add_argument("--out", type=Path, help="also write the report to this file")
     return p
 
 
@@ -116,6 +120,17 @@ def main(argv: list[str] | None = None) -> int:
             for line in report.lines:
                 print(line)
             return 1 if report.has_problems else 0
+
+        if args.command == "report":
+            from .report import ISSUE_URL, build_report
+
+            text = build_report(args.game_dir)
+            print(text)
+            print(f"\nPaste this into the game-test issue: {ISSUE_URL}")
+            if args.out:
+                args.out.write_text(text + "\n", encoding="utf-8")
+                print(f"report written to {args.out}")
+            return 0
 
     except FileNotFoundError as e:
         print(f"错误: {e}", file=sys.stderr)
