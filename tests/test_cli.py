@@ -50,8 +50,9 @@ def test_invalid_mfg_rejected(game: Path, kit: Path):
     assert rc != 0
 
 
-def test_bare_invocation_still_returns_2():
+def test_bare_invocation_still_returns_2(capsys):
     assert main([]) == 2
+    assert "usage:" in capsys.readouterr().err
 
 
 def test_check_update_only_returns_0_and_never_blocks(monkeypatch, capsys):

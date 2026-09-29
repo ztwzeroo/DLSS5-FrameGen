@@ -22,3 +22,12 @@ def test_help_and_doctor_output_english(tmp_path):
     assert not CJK.search(_build_parser().format_help())
     (tmp_path / "ReShade.ini").write_text("[GENERAL]\n", encoding="utf-8")
     assert not CJK.search("\n".join(doctor(tmp_path).lines))
+    # a manifest whose validation error text is embedded in doctor lines must be English too
+    d = tmp_path / ".dlss-combo"
+    d.mkdir()
+    (d / "manifest.json").write_text(
+        '{"version": 99, "created": "t", "dlss_combo_version": "0.1.3", '
+        '"dlssg": {}, "files": [], "backups": []}', encoding="utf-8")
+    rep = doctor(tmp_path)
+    assert any("unknown manifest schema version" in ln for ln in rep.lines)
+    assert not CJK.search("\n".join(rep.lines))

@@ -59,8 +59,9 @@ def main(argv: list[str] | None = None) -> int:
             stream.reconfigure(encoding="utf-8", errors="replace")
         except (AttributeError, OSError):
             pass
+    parser = _build_parser()
     try:
-        args = _build_parser().parse_args(argv)
+        args = parser.parse_args(argv)
     except SystemExit as e:  # argparse 参数错误 → 退出码而非异常
         return e.code if isinstance(e.code, int) else 2
     if getattr(args, "check_update", False):
@@ -156,5 +157,8 @@ def main(argv: list[str] | None = None) -> int:
         print(f"error: {type(e).__name__}: {e}", file=sys.stderr)
         return 3
     if args.command is None:  # 裸调用（无子命令）：仅 --check-update 可返回 0
-        return 0 if getattr(args, "check_update", False) else 2
+        if getattr(args, "check_update", False):
+            return 0
+        parser.print_usage(sys.stderr)
+        return 2
     return 0
