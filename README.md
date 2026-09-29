@@ -14,6 +14,7 @@
 [![Target: Windows](https://img.shields.io/badge/target-Windows_10%2F11-334234?style=flat-square)](#will-it-work-with-my-setup)
 [![GPU: RTX 20 / 30](https://img.shields.io/badge/GPU-RTX_20_%2F_30-5b713b?style=flat-square)](#will-it-work-with-my-setup)
 [![License: MIT](https://img.shields.io/badge/license-MIT-334234?style=flat-square)](LICENSE)
+[![upstream-check](https://github.com/ztwzeroo/DLSS5-FrameGen/actions/workflows/upstream-check.yml/badge.svg)](https://github.com/ztwzeroo/DLSS5-FrameGen/actions/workflows/upstream-check.yml)
 
 > **Developer preview.** Best suited to contributors and experienced modders using disposable test copies. The file-safety, rollback and checksum issues from the [2026-09-20 review](docs/reviews/2026-09-20-project-review.md) are fixed and pinned by regression tests (the review's repro script now reports all nine behaviors fixed). No verified in-game benchmarks yet. **Read the [current limitations](docs/STATUS.md) before installing.**
 

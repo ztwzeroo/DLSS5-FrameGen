@@ -163,6 +163,15 @@ class SwapperInfo:
     zip_path: Path
 
 
+def select_portable_asset(assets: dict[str, str]) -> str | None:
+    """latest release 资产名 → portable 包名；Setup 安装器不算。"""
+    return next(
+        (n for n in assets
+         if "portable" in n.lower() and n.lower().endswith((".zip", ".exe"))),
+        None,
+    )
+
+
 def fetch_swapper(
     kit_dir: Path,
     refresh: bool = False,
@@ -182,11 +191,7 @@ def fetch_swapper(
     release = json.loads(fetch_bytes(SWAPPER_API).decode("utf-8"))
     assets = {a["name"]: a["browser_download_url"] for a in release.get("assets", [])}
     # 上游实际发布 *.portable.exe（也有过 .zip 的可能）；Setup 安装器不是我们要的
-    portable_name = next(
-        (n for n in assets
-         if "portable" in n.lower() and n.lower().endswith((".zip", ".exe"))),
-        None,
-    )
+    portable_name = select_portable_asset(assets)
     if portable_name is None:
         raise RuntimeError(f"no portable asset in {SWAPPER_REPO} latest release")
 

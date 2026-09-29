@@ -1,0 +1,46 @@
+name: upstream-check
+
+on:
+  schedule:
+    - cron: "17 6 * * *"
+  workflow_dispatch:
+  push:
+    paths: ["scripts/upstream_check.py", ".github/workflows/upstream-check.yml"]
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Upstream structure smoke
+        id: smoke
+        run: |
+          set +e
+          python scripts/upstream_check.py | tee upstream-check.log
+          echo "exit=$?" >> "$GITHUB_OUTPUT"
+          exit 0
+      - name: Manage drift issue
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          EXIT_CODE: ${{ steps.smoke.outputs.exit }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          gh label create upstream-check --color d73a4a --force || true
+          LABEL="upstream-check"
+          TITLE="[upstream-check] upstream structure drift"
+          ISSUE=$(gh issue list --label "$LABEL" --state open --json number --jq '.[0].number')
+          if [ "$EXIT_CODE" != "0" ]; then
+            BODY="Daily upstream smoke failed. Details and run: $RUN_URL"$'\n'$'\n'"$(cat upstream-check.log)"
+            if [ -n "$ISSUE" ]; then gh issue comment "$ISSUE" --body "$BODY"
+            else gh issue create --title "$TITLE" --label "$LABEL" --body "$BODY"; fi
+          elif [ -n "$ISSUE" ]; then
+            gh issue close "$ISSUE" --comment "Upstream smoke green again: $RUN_URL"
+          fi
