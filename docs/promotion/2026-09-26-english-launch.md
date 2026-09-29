@@ -47,7 +47,7 @@ Do not use this in r/nvidia without moderator approval: its published rules proh
 
 | Channel | Publication date | URL | Status / learning |
 |---|---|---|---|
-| Guru3D | — | — | Draft prepared; not posted |
+| Guru3D | 2026-09-29 | https://forums.guru3d.com/threads/dlss5-framegen-rtx-20-30-dlss-5-frame-generation-setup-tool-testers-wanted.461994/ | Published in Game Tweaks and Modifications with a [conceptual workflow graphic](assets/guru3d-workflow.png); asks for RTX 20/30 game-test reports and makes no verified performance claim. |
 | Other community | — | — | Not posted |
 
 For every channel, track visits to the canonical release, completed downloads, distinct usable test reports, and confirmed game configurations. GitHub stars alone are a weak success measure for a tool that has not yet been validated in games.
