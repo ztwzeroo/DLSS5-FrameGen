@@ -173,7 +173,7 @@ def test_missing_preexisting_backup_aborts_uninstall(tmp_path: Path):
     kit = make_kit(tmp_path)
     install(g, kit, arch="sm86")
     (g / MANIFEST_DIR / "backups" / (INI_NAME + ".pre.bak")).unlink()
-    with pytest.raises(RuntimeError, match="备份"):
+    with pytest.raises(RuntimeError, match="backup"):
         uninstall(g)
     # 未删除任何东西
     assert (g / "version.dll").exists()
@@ -193,9 +193,9 @@ def test_doctor_stale_success_is_not_reported_as_current(tmp_path: Path):
     os.utime(newer, (200, 200))
     rep = doctor(tmp_path)
     assert rep.route_active is None
-    assert not any("OK: dlssg 插帧路由已生效" in l for l in rep.lines)
-    assert any("未验证" in l or "无 route" in l for l in rep.lines)
-    assert any("历史" in l and "backend_old" in l for l in rep.lines)
+    assert not any("routing is active" in l for l in rep.lines)
+    assert any("unverified" in l for l in rep.lines)
+    assert any("historical" in l and "backend_old" in l for l in rep.lines)
 
 
 # ---------- R7：刷新中断不破坏可用 kit ----------

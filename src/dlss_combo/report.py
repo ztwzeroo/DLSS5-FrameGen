@@ -19,7 +19,7 @@ def _manifest_lines(game_dir: Path) -> list[str]:
         m = Manifest.load(game_dir)
     except FileNotFoundError:
         return ["- install manifest: **not installed by dlss-combo**"]
-    except Exception:  # noqa: BLE001 — 报告只陈述，不判定
+    except Exception:  # noqa: BLE001 — the report only states facts, never judges
         return ["- install manifest: present but unreadable"]
     d = m.dlssg if isinstance(m.dlssg, dict) else {}
     return [
@@ -44,7 +44,7 @@ def _gpu_lines(gpu_runner: Callable[[str], str] | None) -> list[str]:
     out = []
     for g in gpus:
         mark = " *(selected)*" if g is primary else ""
-        out.append(f"- GPU: {g.name} — arch {g.arch}, driver {g.driver_version}{mark}")
+        out.append(f"- GPU: {g.name} — arch {g.arch}, driver {g.driver_version or '?'}{mark}")
     return out
 
 

@@ -12,35 +12,38 @@ DEFAULT_KIT = Path.home() / "dlss-combo-kit"
 def _build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
         prog="dlss-combo",
-        description="DLSS 5 画质（DLSS5-Swapper）+ DLSS 帧生成（dlssg_for_sm86）组合安装器",
+        description="DLSS 5 image upscaling (DLSS5-Swapper) + DLSS frame generation "
+                    "(dlssg_for_sm86) combo installer",
     )
     p.add_argument("--version", action="version", version=f"dlss-combo {__version__}")
-    sub = p.add_subparsers(dest="command", required=True)
+    p.add_argument("--check-update", action="store_true",
+                   help="check GitHub for a newer dlss-combo release, then continue")
+    sub = p.add_subparsers(dest="command", required=False)
 
-    pf = sub.add_parser("fetch", help="下载/更新 kit 缓存（上游二进制）")
+    pf = sub.add_parser("fetch", help="download/update the kit cache (upstream binaries)")
     pf.add_argument("--kit-dir", type=Path, default=DEFAULT_KIT)
     pf.add_argument("--runtime", choices=["310.9", "310.1"], default="310.9")
-    pf.add_argument("--refresh", action="store_true", help="强制重新下载")
+    pf.add_argument("--refresh", action="store_true", help="force re-download")
 
-    pi = sub.add_parser("install", help="把插帧层装进游戏目录")
+    pi = sub.add_parser("install", help="install the frame-gen layer into a game directory")
     pi.add_argument("game_dir", type=Path)
     pi.add_argument("--kit-dir", type=Path, default=DEFAULT_KIT)
     pi.add_argument("--mfg", choices=sorted(MFG_PRESET), default="4x")
     pi.add_argument("--tier", type=int, choices=[0, 1, 2, 3], default=1)
     pi.add_argument("--runtime", choices=["310.9", "310.1"], default="310.9")
-    pi.add_argument("--arch", help="显式指定架构 sm75/sm86（探测失败或需覆盖时用）")
+    pi.add_argument("--arch", help="explicit GPU arch sm75/sm86 (when detection fails or to override)")
     pi.add_argument("--allow-dxgi", action="store_true",
-                    help="允许占用 dxgi.dll 代理名（ReShade/OptiScaler 常用，慎选）")
+                    help="allow the dxgi.dll proxy name (commonly used by ReShade/OptiScaler; think twice)")
     pi.add_argument("--proxy", choices=[
         "version.dll", "winmm.dll", "dbghelp.dll", "dinput8.dll", "d3d12.dll", "dxgi.dll",
-    ], help="显式指定代理 DLL 名（默认按上游推荐顺序取空闲位）")
+    ], help="explicit proxy DLL name (default: first free slot in upstream-recommended order)")
     pi.add_argument("--launch-swapper", action="store_true",
-                    help="安装后自动拉起 kit 中的 DLSS5-Swapper portable（画质层）")
+                    help="launch the kit's DLSS5-Swapper portable after install (image layer)")
 
-    pu = sub.add_parser("uninstall", help="按 manifest 还原安装前状态")
+    pu = sub.add_parser("uninstall", help="restore the pre-install state from the manifest")
     pu.add_argument("game_dir", type=Path)
 
-    pd = sub.add_parser("doctor", help="只读体检：路由日志、冲突、画质层")
+    pd = sub.add_parser("doctor", help="read-only health check: routing logs, conflicts, image layer")
     pd.add_argument("game_dir", type=Path)
 
     pr = sub.add_parser("report", help="print a paste-ready markdown report for the game-test issue")
@@ -60,18 +63,28 @@ def main(argv: list[str] | None = None) -> int:
         args = _build_parser().parse_args(argv)
     except SystemExit as e:  # argparse 参数错误 → 退出码而非异常
         return e.code if isinstance(e.code, int) else 2
+    if getattr(args, "check_update", False):
+        from .update import check_update
+
+        info = check_update(__version__)
+        if info.status == "available":
+            print(f"update available: {info.latest_tag} -> {info.url}")
+        elif info.status == "latest":
+            print(f"dlss-combo {__version__} is up to date (latest: {info.latest_tag})")
+        else:
+            print("update check skipped (network unavailable)")
     try:
         if args.command == "fetch":
             from .fetch import fetch_kit, fetch_swapper
 
             kit = fetch_kit(args.kit_dir, runtime=args.runtime, refresh=args.refresh)
-            print(f"dlssg kit 就绪: {kit.root} (commit {kit.dlssg_commit})")
+            print(f"dlssg kit ready: {kit.root} (commit {kit.dlssg_commit})")
             try:
                 sw = fetch_swapper(args.kit_dir, refresh=args.refresh)
-                print(f"DLSS5-Swapper portable 就绪: {sw.zip_path} ({sw.tag})")
+                print(f"DLSS5-Swapper portable ready: {sw.zip_path} ({sw.tag})")
             except Exception as e:
-                print(f"[警告] DLSS5-Swapper 下载失败（可用图形界面手动下载）: {e}",
-                      file=sys.stderr)
+                print(f"[warn] DLSS5-Swapper download failed (you can grab it manually from "
+                      f"its GitHub releases page): {e}", file=sys.stderr)
             return 0
 
         if args.command == "install":
@@ -89,32 +102,33 @@ def main(argv: list[str] | None = None) -> int:
                 proxy=args.proxy,
             )
             for line in result.actions:
-                print(f"[动作] {line}")
+                print(f"[ok] {line}")
             for line in result.warnings:
-                print(f"[警告] {line}")
+                print(f"[warn] {line}")
             for line in result.guidance:
-                print(f"[指引] {line}")
+                print(f"[info] {line}")
             if result.ok and args.launch_swapper:
                 try:
                     exe = launch_swapper(args.kit_dir)
-                    print(f"[动作] 已拉起 DLSS5-Swapper: {exe.name}")
-                    print("[指引] 在 Swapper 里给本游戏装好 DLSS 5 后，回来跑 doctor 复检")
+                    print(f"[ok] launched DLSS5-Swapper: {exe.name}")
+                    print("[info] once the Swapper has DLSS 5 installed for this game, "
+                          "run doctor again to re-check")
                 except FileNotFoundError as e:
-                    print(f"[警告] {e}", file=sys.stderr)
+                    print(f"[warn] {e}", file=sys.stderr)
             return 0 if result.ok else 1
 
         if args.command == "uninstall":
             from .uninstall import uninstall
 
             for line in uninstall(args.game_dir):
-                print(f"[动作] {line}")
+                print(f"[ok] {line}")
             return 0
 
         if args.command == "doctor":
             from .doctor import doctor
 
             if not args.game_dir.is_dir():
-                print(f"错误: 目录不存在: {args.game_dir}", file=sys.stderr)
+                print(f"error: directory not found: {args.game_dir}", file=sys.stderr)
                 return 2
             report = doctor(args.game_dir)
             for line in report.lines:
@@ -133,12 +147,14 @@ def main(argv: list[str] | None = None) -> int:
             return 0
 
     except FileNotFoundError as e:
-        print(f"错误: {e}", file=sys.stderr)
+        print(f"error: {e}", file=sys.stderr)
         return 2
     except ValueError as e:
-        print(f"错误: {e}", file=sys.stderr)
+        print(f"error: {e}", file=sys.stderr)
         return 2
     except Exception as e:  # 网络/IO 等意外，给出可读信息而非栈
-        print(f"错误: {type(e).__name__}: {e}", file=sys.stderr)
+        print(f"error: {type(e).__name__}: {e}", file=sys.stderr)
         return 3
+    if args.command is None:  # 裸调用（无子命令）：仅 --check-update 可返回 0
+        return 0 if getattr(args, "check_update", False) else 2
     return 0

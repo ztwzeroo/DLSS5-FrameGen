@@ -86,7 +86,7 @@ def test_replaced_dll_survives_reinstall_and_uninstall(tmp_path: Path):
     (g / "version.dll").write_bytes(b"new third party mod")
     r = install(g, kit, arch="sm86")  # 重装
     assert (g / "version.dll").read_bytes() == b"new third party mod"
-    assert any("外部修改" in w or "保留" in w for w in r.warnings)
+    assert any("modified externally" in w or "kept" in w for w in r.warnings)
     uninstall(g)
     assert (g / "version.dll").read_bytes() == b"new third party mod"
 
@@ -271,7 +271,7 @@ def test_parse_route_active_strict_booleans():
 def test_doctor_empty_reshade_folder_is_not_dlss5(tmp_path: Path):
     (tmp_path / "reshade-shaders").mkdir()
     rep = doctor(tmp_path)
-    assert not any("OK: 检测到 DLSS 5" in l for l in rep.lines)
+    assert not any("image-layer files present" in l for l in rep.lines)
 
 
 def test_doctor_report_problems_and_cli_exit_code(tmp_path: Path, game: Path, kit: Path, capsys):

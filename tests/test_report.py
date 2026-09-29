@@ -2,8 +2,6 @@
 import json
 from pathlib import Path
 
-import pytest
-
 from dlss_combo import __version__
 from dlss_combo.cli import main
 from dlss_combo.manifest import VERSION
@@ -41,17 +39,10 @@ def test_report_without_manifest_says_so(tmp_path):
 
 
 def test_report_leaks_no_tmp_paths(tmp_path):
-    import re
     text = build_report(_game(tmp_path), gpu_runner=lambda c: CSV)
     assert str(tmp_path) not in text
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="doctor lines are Chinese until Task 5's English sweep; when they turn "
-           "English this XPASS(strict) forces removing this marker and restoring "
-           "the unconditional assertion",
-)
 def test_report_is_english(tmp_path):
     import re
     text = build_report(_game(tmp_path), gpu_runner=lambda c: CSV)

@@ -31,7 +31,7 @@ def test_newest_log_failure_beats_older_success(tmp_path):
     t = time.time(); os.utime(old, (t - 100, t - 100)); os.utime(new, (t, t))
     rep = doctor(game)
     assert rep.route_active is False
-    assert any("historical" in ln.lower() or "更早" in ln for ln in rep.lines)
+    assert any("historical" in ln.lower() for ln in rep.lines)
 
 
 def test_unreadable_log_is_a_problem_not_a_crash(tmp_path, monkeypatch):
