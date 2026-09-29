@@ -26,25 +26,50 @@ SWAPPER_API = "https://api.github.com/repos/rakanki911/DLSS5-Swapper/releases/la
 
 def run_checks(fetch_bytes: Callable[[str], bytes]) -> list[str]:
     problems: list[str] = []
-    sha = json.loads(fetch_bytes(COMMIT_API)).get("sha")
+
+    def guarded(url: str) -> bytes | None:
+        # 任何取回失败都转成检查项（含 GitHub 匿名限流），绝不让脚本带 traceback 崩掉
+        try:
+            return fetch_bytes(url)
+        except Exception as e:  # noqa: BLE001 — 把一切取回失败都转成检查项
+            problems.append(f"{url}: {type(e).__name__}: {e}")
+            return None
+
+    def guarded_json(url: str) -> dict | None:
+        blob = guarded(url)
+        if blob is None:
+            return None
+        try:
+            parsed = json.loads(blob)
+        except ValueError as e:
+            problems.append(f"{url}: non-JSON body: {type(e).__name__}: {e}")
+            return None
+        if not isinstance(parsed, dict):
+            problems.append(f"{url}: unexpected JSON body type: {type(parsed).__name__}")
+            return None
+        return parsed
+
+    commit = guarded_json(COMMIT_API)
+    if commit is None:
+        return problems
+    sha = commit.get("sha")
     if not isinstance(sha, str) or not sha:
         return [f"{COMMIT_API}: no sha in response"]
     for runtime in ("310.9", "310.1"):
         for repo_path in kit_files(runtime):
             url = f"{RAW}/{sha}/{repo_path}"
-            try:
-                blob = fetch_bytes(url)
-            except Exception as e:  # noqa: BLE001 — 把一切取回失败都转成检查项
-                problems.append(f"{url}: {type(e).__name__}: {e}")
-                continue
-            if not blob:
+            blob = guarded(url)
+            if blob is not None and not blob:
                 problems.append(f"{url}: empty body")
-    ini_text = fetch_bytes(f"{RAW}/{sha}/dlssg_sm86.ini").decode("utf-8", errors="replace")
-    problems.extend(f"upstream dlssg_sm86.ini missing key: {m}" for m in missing_ini_keys(ini_text))
-    release = json.loads(fetch_bytes(SWAPPER_API))
-    assets = {a["name"]: a.get("browser_download_url", "") for a in release.get("assets", [])}
-    if select_portable_asset(assets) is None:
-        problems.append(f"{SWAPPER_API}: no portable asset among {sorted(assets)}")
+    ini_blob = guarded(f"{RAW}/{sha}/dlssg_sm86.ini")
+    if ini_blob is not None:
+        ini_text = ini_blob.decode("utf-8", errors="replace")
+        problems.extend(f"upstream dlssg_sm86.ini missing key: {m}" for m in missing_ini_keys(ini_text))
+    release = guarded_json(SWAPPER_API)
+    if release is not None:
+        assets = {a["name"]: a.get("browser_download_url", "") for a in release.get("assets", [])}
+        if select_portable_asset(assets) is None:
+            problems.append(f"{SWAPPER_API}: no portable asset among {sorted(assets)}")
     return problems
 
 

@@ -59,3 +59,17 @@ def test_no_portable_asset_fails():
 
 def test_selftest_runs_green():
     assert uc.main(["--selftest"]) == 0
+
+
+def test_commit_api_error_becomes_problem():
+    bad = healthy()
+    problems = uc.run_checks(
+        lambda url: (_ for _ in ()).throw(LookupError(url)) if url == uc.COMMIT_API else bad[url]
+    )
+    assert problems and any(uc.COMMIT_API in p for p in problems)
+
+
+def test_swapper_non_json_becomes_problem():
+    bad = healthy({uc.SWAPPER_API: b"not json"})
+    problems = uc.run_checks(lambda url: bad[url])
+    assert problems and any(uc.SWAPPER_API in p for p in problems)
