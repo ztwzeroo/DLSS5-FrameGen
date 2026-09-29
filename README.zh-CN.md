@@ -118,7 +118,7 @@ The command remains **`dlss-combo`**; the public project name is **DLSS5-FrameGe
 |---|---|
 | `fetch [--runtime 310.9\|310.1] [--kit-dir DIR] [--refresh]` | Download components; default cache is `~/dlss-combo-kit` / 下载组件 |
 | `install DIR [--mfg 2x\|3x\|4x\|6x] [--tier 0-3] [--runtime 310.9\|310.1] [--kit-dir DIR]` | Install the frame-generation layer / 安装插帧层 |
-| `install DIR --arch sm75\|sm86` | Override GPU detection; currently also bypasses driver detection / 覆盖 GPU 探测，当前也会跳过驱动探测 |
+| `install DIR --arch sm75\|sm86` | Override GPU-architecture detection; driver version checks still run / 覆盖 GPU 架构探测；驱动版本检查仍会执行 |
 | `install DIR --launch-swapper` | Open the cached Swapper asset; launch validation improvements are pending / 打开缓存的 Swapper，启动校验待完善 |
 | `doctor DIR` | Inspect files and available logs / 读取文件与日志状态 |
 | `report DIR [--out FILE]` | Print a paste-ready offline game-test report / 生成可直接粘贴的游戏测试报告（离线、只读） |

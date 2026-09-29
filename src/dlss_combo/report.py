@@ -44,7 +44,7 @@ def _gpu_lines(gpu_runner: Callable[[str], str] | None) -> list[str]:
     out = []
     for g in gpus:
         mark = " *(selected)*" if g is primary else ""
-        out.append(f"- GPU: {g.name} — arch {g.arch}, driver {g.driver_version or '?'}{mark}")
+        out.append(f"- GPU: {g.name} — arch {g.arch or '?'}, driver {g.driver_version or '?'}{mark}")
     return out
 
 
@@ -60,7 +60,7 @@ def build_report(game_dir: Path, gpu_runner: Callable[[str], str] | None = None)
         *_manifest_lines(game_dir),
         *_gpu_lines(gpu_runner),
         f"- doctor verdict: {verdict}",
-        (f"- image layer: files present (not proof of an active layer): {image_files}"
+        (f"- image layer: files present (not proof of an active layer): {', '.join(image_files)}"
          if image_files else "- image layer: no ReShade/RenoDX/Feeder files found"),
     ]
     if rep.problems:

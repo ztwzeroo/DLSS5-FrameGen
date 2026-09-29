@@ -5,6 +5,7 @@ on:
     - cron: "17 6 * * *"
   workflow_dispatch:
   push:
+    branches: [main]
     paths: ["scripts/upstream_check.py", ".github/workflows/upstream-check.yml"]
 
 permissions:
@@ -23,9 +24,11 @@ jobs:
         id: smoke
         run: |
           set +e
+          set -o pipefail
           python scripts/upstream_check.py | tee upstream-check.log
-          echo "exit=$?" >> "$GITHUB_OUTPUT"
-          exit 0
+          code=$?
+          echo "exit=$code" >> "$GITHUB_OUTPUT"
+          exit $code
       - name: Manage drift issue
         if: always()
         env:

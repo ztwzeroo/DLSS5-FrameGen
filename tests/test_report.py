@@ -33,6 +33,14 @@ def test_report_contains_all_sections(tmp_path):
         assert needle in text, needle
 
 
+def test_report_gpu_row_with_unrecognized_arch_renders_placeholder(tmp_path):
+    # GT 710 matches no name→arch rule → arch None must render as '?', never literal "None"
+    csv = "name, driver_version\nNVIDIA GeForce GT 710, 580.88\n"
+    text = build_report(_game(tmp_path), gpu_runner=lambda c: csv)
+    assert "arch ?," in text
+    assert "arch None" not in text
+
+
 def test_report_without_manifest_says_so(tmp_path):
     text = build_report(_game(tmp_path, with_manifest=False), gpu_runner=lambda c: CSV)
     assert "not installed by dlss-combo" in text

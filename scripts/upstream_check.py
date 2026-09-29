@@ -105,16 +105,22 @@ def _selftest() -> int:
         return table
 
     cases = [
-        ("healthy", make(), 0),
-        ("missing kit file", make(drop_kit=True), 1),
-        ("empty kit body", make(drop_kit=True), 1),
-        ("ini key drift", make(rename_key=True), 1),
-        ("no portable asset", make(no_portable=True), 1),
-        ("no sha", make(no_sha=True), 1),
+        ("healthy", make(), set(), 0),
+        # 两个 kit 故障场景必须真实不同：缺失 = 取回该 URL 直接抛异常；空 = 取回成功但 body 为空
+        ("missing kit file (fetch raises)", make(), {f"{RAW}/{sha}/version.dll"}, 1),
+        ("empty kit body", make(drop_kit=True), set(), 1),
+        ("ini key drift", make(rename_key=True), set(), 1),
+        ("no portable asset", make(no_portable=True), set(), 1),
+        ("no sha", make(no_sha=True), set(), 1),
     ]
     failed = 0
-    for name, table, expected_problems in cases:
-        problems = run_checks(lambda url: table[url])
+    for name, table, dead_urls, expected_problems in cases:
+        def fetch(url: str, _table=table, _dead=dead_urls) -> bytes:
+            if url in _dead:
+                raise OSError(f"connection refused: {url}")
+            return _table[url]
+
+        problems = run_checks(fetch)
         ok = (len(problems) >= 1) == (expected_problems >= 1)
         print(f"{'PASS' if ok else 'FAIL'} selftest[{name}]: {problems}")
         failed += 0 if ok else 1

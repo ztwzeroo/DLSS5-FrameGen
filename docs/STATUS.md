@@ -21,7 +21,7 @@ Upstream support claims and configuration limits are not a substitute for testin
 - **Proxy fallback order locked**: the candidate order — upstream tool-class proxies (`version → winmm → dbghelp → dinput8`) before the riskier `d3d12`/`dxgi` — is pinned by a regression test so it cannot silently change; `dxgi.dll` still requires an explicit opt-in. Evidence: `tests/test_proxy_order.py`.
 - **CLI fully English**: help text, diagnostics and error messages are English-only, guarded by a regression test that scans user-facing strings for CJK characters. Internal source comments are unchanged. Evidence: `tests/test_english_cli.py`.
 
-### Daily upstream-structure watch
+## Daily upstream-structure watch
 
 The [upstream-check workflow](https://github.com/ztwzeroo/DLSS5-FrameGen/actions/workflows/upstream-check.yml) (`.github/workflows/upstream-check.yml`, driven by `scripts/upstream_check.py`) runs daily and checks the upstream *structure* dlss-combo depends on: the dlssg_for_sm86 main commit resolves, every kit file still exists at that commit, the generated INI keys are still accepted, and DLSS5-Swapper still publishes a selectable portable asset. Any drift (including failed fetches, e.g. rate limits) opens or updates an auto-labeled `upstream-check` issue, which closes itself once the check is green again. This watches structure, not authenticity — dlssg publishes no checksums.
 

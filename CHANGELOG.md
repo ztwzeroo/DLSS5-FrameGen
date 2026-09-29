@@ -45,9 +45,9 @@ point to files in this repository (`docs/`) so the trail is auditable offline.
   log** (a later failure is never hidden by an earlier success), and
   image-layer files count as evidence only, never as layer activation.
   Evidence: `tests/test_doctor_last_event.py`.
-- Manifest schema/path validation errors are now English — they surface in
-  `doctor`/`install`/`uninstall` instead of aborting with a traceback, and a
-  bare invocation prints usage again (guarded in `tests/test_english_cli.py`).
+- Manifest schema/path validation error messages are now English — translated
+  wording only, failure behavior is unchanged — and a bare invocation prints
+  usage again (guarded in `tests/test_english_cli.py`).
 - Proxy fallback order regression-locked to the upstream tool-class order
   (`version → winmm → dbghelp → dinput8` before `d3d12`/`dxgi`).
   Evidence: `tests/test_proxy_order.py`.

@@ -4,7 +4,7 @@ A good test target has three properties: **native DLSS Frame Generation support*
 
 | Game | Cost | Why it's a good test | Native-FG evidence |
 |---|---|---|---|
-| The Sinking City 2 | Free demo (Steam) | The demo exposes ONLY the DLSS Frame Generation option and gates it to RTX 40+ — exactly the unlock scenario dlssg_for_sm86 targets. A zero-cost first test. | Steam demo store page + Steam Community discussion (June 2026) confirming FG-only, RTX 40-gated |
+| The Sinking City 2 | Free demo (Steam) | The demo exposes ONLY the DLSS Frame Generation option and gates it to RTX 40+ — exactly the unlock scenario dlssg_for_sm86 targets. A zero-cost first test. | [Steam demo store page](https://store.steampowered.com/app/3566310/The_Sinking_City_2/) + Steam Community discussion (June 2026) confirming FG-only, RTX 40-gated |
 | Cyberpunk 2077 | Frequent deep sales | Native DLSS FG plus a built-in benchmark for objective before/after numbers. | [NVIDIA RTX games list](https://www.nvidia.com/en-us/geforce/news/nvidia-rtx-games-engines-apps) |
 | Black Myth: Wukong | Paid | Native DLSS FG, D3D12, single-player. | [NVIDIA RTX games list](https://www.nvidia.com/en-us/geforce/news/nvidia-rtx-games-engines-apps) |
 | Alan Wake 2 | Paid | Native DLSS FG. | [NVIDIA RTX games list](https://www.nvidia.com/en-us/geforce/news/nvidia-rtx-games-engines-apps) |
