@@ -28,7 +28,7 @@
 
 [Compatibility](#will-it-work-with-my-setup) · [FAQ](#frequently-asked-questions) · [Known issues](docs/STATUS.md) · [Contribute](CONTRIBUTING.md) · [Changelog](CHANGELOG.md) · [Dev log](docs/devlog/2026-09-20.md)
 
-*Prebuilt Windows EXE and Linux binaries ship on the [Releases](../../releases) page — or run from source with Python 3.10+. No upstream DLLs are bundled; components are fetched and checksum-verified at install time.*
+*Prebuilt Windows EXE and Linux binaries ship on the [Releases](../../releases) page — or run from source with Python 3.10+. No upstream DLLs are bundled; components are fetched and checksum-verified at install time. See [Downloads & manual placement](DOWNLOADS.md).*
 
 ## Why this project?
 

@@ -20,6 +20,58 @@ from .manifest import Manifest
 DLSSG_REPO = "sdli1995/dlssg_for_sm86"
 RAW_BASE = f"https://raw.githubusercontent.com/{DLSSG_REPO}"
 COMMIT_API = f"https://api.github.com/repos/{DLSSG_REPO}/commits/main"
+
+# 社区镜像（代理 GitHub 官方渠道，仅作最后回退；DLSS_COMBO_MIRRORS 环境变量可覆盖，逗号分隔）
+DEFAULT_MIRRORS: tuple[str, ...] = ("https://gh-proxy.com/", "https://ghproxy.net/")
+_MIRROR_ENV = "DLSS_COMBO_MIRRORS"
+
+
+def _active_mirrors() -> tuple[str, ...]:
+    raw = os.environ.get(_MIRROR_ENV, "")
+    if not raw.strip():
+        return DEFAULT_MIRRORS
+    return tuple(m for m in (s.strip() for s in raw.split(",")) if m)
+
+
+def alternate_urls(url: str) -> list[str]:
+    """同内容的备用下载源：官方 github.com 原始文件链接优先，社区镜像殿后。
+    只处理本工具自己用的 raw.githubusercontent.com 仓库文件与 github.com release
+    资产，其余宿主一律返回空（不做任意 URL 代理）。"""
+    if url.startswith(RAW_BASE):
+        rest = url[len("https://raw.githubusercontent.com/"):]
+        owner, repo, ref, path = rest.split("/", 3)
+        alt = f"https://github.com/{owner}/{repo}/raw/{ref}/{path}"
+        return [alt] + [m + url for m in _active_mirrors()]
+    if url.startswith("https://github.com/") and "/releases/download/" in url:
+        return [m + url for m in _active_mirrors()]
+    return []
+
+
+def fetch_with_fallback(
+    url: str,
+    opener: Callable[[str], bytes] | None = None,
+) -> bytes:
+    """按「官方源 → 官方备用 → 镜像」顺序取回；全部失败时列出所有尝试过的源。"""
+    fetch = opener or _urlopen_bytes
+    attempts: list[str] = []
+    last_error: Exception | None = None
+    for candidate in [url, *alternate_urls(url)]:
+        attempts.append(candidate)
+        try:
+            return fetch(candidate)
+        except Exception as e:  # noqa: BLE001 — 每源失败换下一个，最后统一上报
+            last_error = e
+    tried = "\n  ".join(attempts)
+    raise RuntimeError(
+        f"all download sources failed for {url} — tried primary and alternate sources:\n  {tried}\n"
+        f"last error: {type(last_error).__name__}: {last_error}"
+    )
+
+
+def _urlopen_bytes(url: str) -> bytes:
+    req = urllib.request.Request(url, headers={"User-Agent": "dlss-combo/0.2"})
+    with urllib.request.urlopen(req, timeout=120) as resp:
+        return resp.read()
 ALT_NAMES = ["winmm", "d3d12", "dbghelp", "dinput8", "dxgi"]
 KIT_JSON = "kit.json"
 _SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
@@ -47,9 +99,7 @@ def kit_files(runtime: str) -> dict[str, str]:
 
 
 def _default_fetch(url: str) -> bytes:
-    req = urllib.request.Request(url, headers={"User-Agent": "dlss-combo/0.1"})
-    with urllib.request.urlopen(req, timeout=120) as resp:
-        return resp.read()
+    return fetch_with_fallback(url)
 
 
 def _resolve_commit(fetch_bytes: Callable[[str], bytes]) -> str:

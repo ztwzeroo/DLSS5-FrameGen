@@ -79,6 +79,9 @@ Target environment: **Windows 10/11 x64, RTX 20 or RTX 30**, and a D3D12 game wi
 
 ## Getting started / 开始使用
 
+所有上游文件由工具自动下载（GitHub 访问不畅时自动回退镜像源，可用 `DLSS_COMBO_MIRRORS` 自定义）；也可按 [手动下载与放置指南](DOWNLOADS.md) 自备文件。
+
+
 The commands below are for experimental testing. Read the known issues and keep an independent backup before writing to any game directory. Not sure which game to start with? See [Recommended test games / 推荐测试游戏](docs/TEST-GAMES.md)（英文 / English）.
 
 以下命令供实验测试使用。向游戏目录写入前，请先阅读已知问题并保留独立备份。不知从哪款游戏开始？参考[推荐测试游戏列表](docs/TEST-GAMES.md)（英文）。

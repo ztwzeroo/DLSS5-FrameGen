@@ -5,6 +5,23 @@ All notable changes to this project are documented here. The format follows
 [SemVer](https://semver.org/) with a `0.x` experimental prefix. Evidence links
 point to files in this repository (`docs/`) so the trail is auditable offline.
 
+## [0.2.1] — 2026-09-29
+
+### Added
+
+- **Multi-source download fallback** — `fetch` now tries the official
+  `raw.githubusercontent.com` URL first, then the equivalent `github.com` raw
+  link, and only then community mirrors of the same URLs (default
+  `gh-proxy.com`/`ghproxy.net`, overridable via `DLSS_COMBO_MIRRORS`). All
+  failures list every source tried. We still never redistribute upstream files
+  (`src/dlss_combo/fetch.py`, `tests/test_fetch_sources.py`).
+- **`fetch --runtime all`** — one command downloads both DLSS-G runtimes
+  (310.9 + 310.1) plus the Swapper portable (`src/dlss_combo/cli.py`,
+  `tests/test_fetch_all.py`).
+- **[DOWNLOADS.md](DOWNLOADS.md)** — manual download & placement guide on the
+  repo page: direct upstream links for every file, why NVIDIA SDK terms forbid
+  bundling them into our zips, mirror configuration, integrity notes.
+
 ## [0.2.0] — 2026-09-29
 
 ### Added

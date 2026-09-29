@@ -22,7 +22,7 @@ def _build_parser() -> argparse.ArgumentParser:
 
     pf = sub.add_parser("fetch", help="download/update the kit cache (upstream binaries)")
     pf.add_argument("--kit-dir", type=Path, default=DEFAULT_KIT)
-    pf.add_argument("--runtime", choices=["310.9", "310.1"], default="310.9")
+    pf.add_argument("--runtime", choices=["310.9", "310.1", "all"], default="310.9")
     pf.add_argument("--refresh", action="store_true", help="force re-download")
 
     pi = sub.add_parser("install", help="install the frame-gen layer into a game directory")
@@ -78,8 +78,10 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "fetch":
             from .fetch import fetch_kit, fetch_swapper
 
-            kit = fetch_kit(args.kit_dir, runtime=args.runtime, refresh=args.refresh)
-            print(f"dlssg kit ready: {kit.root} (commit {kit.dlssg_commit})")
+            runtimes = ("310.9", "310.1") if args.runtime == "all" else (args.runtime,)
+            for runtime in runtimes:
+                kit = fetch_kit(args.kit_dir, runtime=runtime, refresh=args.refresh)
+                print(f"dlssg kit ready: {kit.root} (commit {kit.dlssg_commit})")
             try:
                 sw = fetch_swapper(args.kit_dir, refresh=args.refresh)
                 print(f"DLSS5-Swapper portable ready: {sw.zip_path} ({sw.tag})")
