@@ -8,7 +8,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from .manifest import Manifest
-from .scan import scan_game_dir
+from .scan import GameScan, scan_game_dir
 
 
 @dataclass
@@ -16,6 +16,9 @@ class DoctorReport:
     lines: list[str] = field(default_factory=list)
     route_active: bool | None = None
     problems: list[str] = field(default_factory=list)
+    # Image-layer marker files seen in the game dir (e.g. "ReShade") — evidence
+    # only, never proof of an active layer; consumed by downstream reporting.
+    image_layer_files: list[str] = field(default_factory=list)
 
     @property
     def has_problems(self) -> bool:
@@ -41,6 +44,24 @@ def _parse_route_active(text: str) -> bool | None:
             if active is True or active is False:
                 result = active  # 持续覆盖 → 最后一条生效
     return result
+
+
+def _image_layer_names(game_dir: Path, scan: GameScan) -> list[str]:
+    """Image-layer file evidence (weaker than scan's "component complete" verdict):
+    scan flags plus direct marker files — a bare ReShade.ini still proves the file
+    is present, which is all the evidence tier claims."""
+    try:
+        names = {e.name.lower() for e in game_dir.iterdir()}
+    except OSError:
+        names = set()
+    layers: list[str] = []
+    if scan.reshade or "reshade.ini" in names:
+        layers.append("ReShade")
+    if scan.renodx:
+        layers.append("RenoDX")
+    if scan.feeder:
+        layers.append("Feeder")
+    return layers
 
 
 def doctor(game_dir: Path) -> DoctorReport:
@@ -71,7 +92,13 @@ def doctor(game_dir: Path) -> DoctorReport:
     if log_dir.is_dir():
         logs = sorted(log_dir.glob("backend_*.jsonl"), key=lambda p: p.stat().st_mtime, reverse=True)
         for idx, log in enumerate(logs):
-            result = _parse_route_active(log.read_text(encoding="utf-8", errors="replace"))
+            # An unreadable log degrades the diagnosis to a problem; never crash (W5).
+            try:
+                text = log.read_text(encoding="utf-8", errors="replace")
+            except OSError:
+                rep.problems.append(f"log unreadable: {log.name}")
+                continue
+            result = _parse_route_active(text)
             if idx == 0:
                 if result is not None:
                     rep.route_active = result
@@ -108,9 +135,13 @@ def doctor(game_dir: Path) -> DoctorReport:
     if manifest is None and foreign:
         rep.lines.append(f"注意: {foreign} 非本工具安装（无 manifest）——如有异常先排查这些 DLL")
 
-    # 3. 画质层（痕迹 ≠ 组件齐全/已生效，如实表述）
-    if scan.reshade or scan.renodx or scan.feeder:
-        rep.lines.append("已检测到 ReShade/Feeder/RenoDX 痕迹（DLSS 5 画质层载体）；痕迹不代表画质层已在游戏内生效，请进游戏确认")
+    # 3. Image layer (files present are evidence, never proof of activation)
+    rep.image_layer_files = _image_layer_names(game_dir, scan)
+    if rep.image_layer_files:
+        rep.lines.append(
+            "note: image-layer files present (not proof of an active layer): "
+            + ", ".join(rep.image_layer_files)
+        )
     else:
         rep.lines.append("提示: 可用 DLSS5-Swapper 加装 DLSS 5 画质层，与插帧层组合获得更好画面")
 
