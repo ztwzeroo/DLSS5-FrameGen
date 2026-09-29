@@ -18,7 +18,7 @@
 
 > **Developer preview.** Best suited to contributors and experienced modders using disposable test copies. The file-safety, rollback and checksum issues from the [2026-09-20 review](docs/reviews/2026-09-20-project-review.md) are fixed and pinned by regression tests (the review's repro script now reports all nine behaviors fixed). No verified in-game benchmarks yet. **Read the [current limitations](docs/STATUS.md) before installing.**
 
-**Have an RTX 20/30 and a single-player D3D12 game with native frame-generation support?** We are looking for early testers. [Download the Windows developer preview](../../releases/latest), try it on a backed-up test copy, and [share a success or failure report](https://github.com/ztwzeroo/DLSS5-FrameGen/issues/new?template=game-test.yml). We have not yet verified the combined setup in a real Windows game; your report helps establish which configurations actually work.
+**Have an RTX 20/30 and a single-player D3D12 game with native frame-generation support?** We are looking for early testers. See the [recommended test games](docs/TEST-GAMES.md), [download the Windows developer preview](../../releases/latest), try it on a backed-up test copy, and [share a success or failure report](https://github.com/ztwzeroo/DLSS5-FrameGen/issues/new?template=game-test.yml). We have not yet verified the combined setup in a real Windows game; your report helps establish which configurations actually work.
 
 <p>
   <a href="../../releases"><img src="https://img.shields.io/badge/Download-Releases_(exe_/_linux)-d3ff6a?style=for-the-badge&amp;labelColor=263021" alt="Download from Releases"></a>
@@ -56,6 +56,10 @@ flowchart LR
 
 *Setup workflow only. This diagram is not a gameplay demonstration or performance result.*
 
+<p align="center"><img src="assets/demo.svg" alt="dlss-combo workflow demo" width="640"></p>
+
+*Animated CLI walkthrough: `fetch` → `install` → `doctor` → `report`. Illustrative output, not measured game results.*
+
 ## Will it work with my setup?
 
 These are the **target requirements**, not a verified compatibility list.
@@ -70,6 +74,8 @@ These are the **target requirements**, not a verified compatibility list.
 | Use | Single-player test copies, without anti-cheat |
 
 RTX 40/50, Vulkan games and games without native frame-generation support are outside this project's current target. Other mods may conflict. **Do not use this with anti-cheat or competitive multiplayer games.**
+
+**Multiple NVIDIA GPUs:** when several cards are present, the tool picks the **first card with a supported architecture** (RTX 20/30) and `doctor` lists every card in the rig so you can confirm which one was selected; `install DIR --arch sm75|sm86` overrides the choice. Looking for a suitable game? See [Recommended test games](docs/TEST-GAMES.md).
 
 ## Get started
 
@@ -93,6 +99,8 @@ py -m dlss_combo fetch
 
 Prefer Git? Clone `https://github.com/ztwzeroo/DLSS5-FrameGen.git`, open that folder, and run the same commands. The Python package and CLI retain the original names `dlss_combo` and `dlss-combo`.
 
+Add `--check-update` to any command (for example `py -m dlss_combo --check-update doctor DIR`) for a non-blocking check that a newer dlss-combo release exists — it prints one line and never interrupts the run, and it is skipped silently when offline.
+
 ### 2. Configure the image layer
 
 Open the downloaded **DLSS5-Swapper portable EXE** in `~/dlss-combo-kit/swapper/`. Use its interface and upstream instructions to configure your **test copy** of the game. If the asset is a ZIP, follow the upstream extraction instructions first.
@@ -115,7 +123,11 @@ Enable frame generation in the game's graphics settings if available. After a te
 py -m dlss_combo doctor "C:/Games/TestCopy/Binaries/Win64"
 ```
 
-A successful file installation or detected ReShade folder does **not** prove either rendering layer is active. Diagnostics have known limitations; [report your observed result](https://github.com/ztwzeroo/DLSS5-FrameGen/issues/new?template=game-test.yml), including failures.
+A successful file installation or detected ReShade folder does **not** prove either rendering layer is active. Diagnostics have known limitations; [report your observed result](https://github.com/ztwzeroo/DLSS5-FrameGen/issues/new?template=game-test.yml), including failures. To make that easy, `report` generates a paste-ready offline game-test report:
+
+```powershell
+py -m dlss_combo report "C:/Games/TestCopy/Binaries/Win64"
+```
 
 <details>
 <summary><strong>More commands and tuning options</strong></summary>
@@ -132,6 +144,8 @@ Use `py -m dlss_combo --help` or `py -m dlss_combo install --help` for the full 
 | `install DIR --arch sm86` | Override the GPU-architecture check; driver checks still run. |
 | `install DIR --proxy winmm.dll` | Pin a specific proxy DLL name (default order follows the upstream tool-class proxies first). |
 | `install DIR --launch-swapper` | Launch the downloaded DLSS5-Swapper portable after installing (checksum-verified). |
+| `report DIR` | Print a paste-ready markdown game-test report (offline, read-only). Add `--out FILE` to save it. |
+| `--check-update` (before any command) | Non-blocking check for a newer dlss-combo release; skipped when offline. |
 | `uninstall DIR` | Remove managed files. Read the file-safety and restoration issues first. |
 
 6X requires a compatible 310.9 build **and** game. Setting 6X with 310.1 does not make that runtime support it. Some optimization tiers are also runtime-dependent. Consult the [upstream INI](https://github.com/sdli1995/dlssg_for_sm86/blob/main/dlssg_sm86.ini) for meanings and constraints.
@@ -163,7 +177,7 @@ WINEDLLOVERRIDES="version=n,b" PROTON_ENABLE_NVAPI=1 PROTON_NVIDIA_NVCUDA=1 %com
 
 | Evidence | Current state |
 |---|---|
-| Offline Python tests | 122 passing at v0.1.3; CI runs the suite on Windows/Linux/macOS on every push |
+| Offline Python tests | 155 passing at v0.2.0; CI runs the suite on Windows/Linux/macOS on every push |
 | Review regression | The 2026-09-20 repro script reports all nine fixed behaviors |
 | Release binaries | Windows EXE + Linux x64 built by GitHub Actions from each tagged commit |
 | Windows game sessions | Not yet validated by this project |
@@ -198,9 +212,9 @@ There are no verified performance results for this combined toolkit yet. GPU, ga
 </details>
 
 <details>
-<summary><strong>Why are some command-line messages in Chinese?</strong></summary>
+<summary><strong>What language is the CLI output in?</strong></summary>
 
-The English documentation covers setup, but the CLI currently includes Chinese messages. English CLI output is on the roadmap. Include the original output when reporting a problem.
+Since v0.2.0 the CLI is English-only — help text, diagnostics and errors (internal source comments remain Chinese). If you see output from an older release that mixes languages, include the original output when reporting a problem, or update to the latest release.
 
 </details>
 
@@ -215,8 +229,8 @@ We will add them when reproducible Windows/NVIDIA tests are available. The banne
 
 - [x] Add regression protection for externally modified files and original configuration recovery.
 - [x] Re-verify cached files and keep the previous kit usable if refresh fails.
+- [x] Make the CLI English-only (help, diagnostics, errors), guarded by a regression test.
 - [ ] Add an installation preview and improve per-session diagnostics with real game evidence.
-- [ ] Add English CLI messages and clearer error guidance.
 - [ ] Validate Windows behavior and publish reproducible RTX 20/30 game results.
 
 See the [English status and known issues](docs/STATUS.md), [detailed audit (Chinese)](docs/reviews/2026-09-20-project-review.md), and [contributor guide](CONTRIBUTING.md).

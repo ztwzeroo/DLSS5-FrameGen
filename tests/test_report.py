@@ -15,7 +15,7 @@ def _game(tmp_path: Path, *, with_manifest: bool = True) -> Path:
     if with_manifest:
         (g / ".dlss-combo").mkdir()
         (g / ".dlss-combo" / "manifest.json").write_text(json.dumps({
-            "version": VERSION, "created": "t", "dlss_combo_version": "0.1.3-test",
+            "version": VERSION, "created": "t", "dlss_combo_version": "0.2.0-test",
             "dlssg": {"commit": "c" * 40, "runtime": "310.9", "proxy_name": "version.dll",
                        "tier": 1, "mfg": "4x"},
             "files": [{"path": "version.dll", "sha256": "0" * 64, "origin": "kit"}],

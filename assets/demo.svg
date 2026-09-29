@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="500" viewBox="0 0 800 500" role="img" aria-labelledby="demo-title demo-desc">
+  <title id="demo-title">dlss-combo workflow demo</title>
+  <desc id="demo-desc">Animated terminal cycling through the four dlss-combo steps: fetch, install, doctor, report. Illustrative CLI output only, not real game or performance results.</desc>
+
+  <!-- Terminal window -->
+  <rect x="1" y="1" width="798" height="498" rx="12" fill="#1e1e1e" stroke="#3a3a3a" stroke-width="2"/>
+  <!-- Title bar (rounded top, squared bottom) -->
+  <rect x="2" y="2" width="796" height="35" rx="10" fill="#2b2b2b"/>
+  <rect x="2" y="24" width="796" height="13" fill="#2b2b2b"/>
+  <path d="M2 37 H798" stroke="#3a3a3a" stroke-width="1"/>
+  <circle cx="26" cy="19" r="6" fill="#ff5f57"/>
+  <circle cx="48" cy="19" r="6" fill="#febc2e"/>
+  <circle cx="70" cy="19" r="6" fill="#28c840"/>
+  <text x="400" y="24" text-anchor="middle" fill="#9b9b9b" font-family="monospace" font-size="13">dlss-combo — workflow demo</text>
+
+  <!-- Panel 1: fetch (visible 0-3s of a 12s cycle) -->
+  <g font-family="monospace" font-size="16" opacity="1">
+    <animate attributeName="opacity" calcMode="discrete" dur="12s" repeatCount="indefinite" keyTimes="0;0.25;0.5;0.75" values="1;0;0;0"/>
+    <text x="40" y="80" fill="#7a7a7a" font-size="13">step 1/4 — fetch</text>
+    <text x="40" y="124" fill="#4ec94e">&gt;</text>
+    <text x="60" y="124" fill="#e8e8e8">dlss-combo fetch</text>
+    <text x="60" y="160" fill="#cfcfcf">dlssg kit ready (commit a1b2…c3d4)</text>
+    <text x="60" y="188" fill="#cfcfcf">DLSS5-Swapper portable ready (v2.2.7)</text>
+    <text x="40" y="244" fill="#4ec94e">&gt;</text>
+    <rect x="60" y="230" width="10" height="18" fill="#4ec94e">
+      <animate attributeName="opacity" calcMode="discrete" values="1;0" keyTimes="0;0.5" dur="1.2s" repeatCount="indefinite"/>
+    </rect>
+  </g>
+
+  <!-- Panel 2: install (visible 3-6s) -->
+  <g font-family="monospace" font-size="16" opacity="0">
+    <animate attributeName="opacity" calcMode="discrete" dur="12s" repeatCount="indefinite" keyTimes="0;0.25;0.5;0.75" values="0;1;0;0"/>
+    <text x="40" y="80" fill="#7a7a7a" font-size="13">step 2/4 — install</text>
+    <text x="40" y="124" fill="#4ec94e">&gt;</text>
+    <text x="60" y="124" fill="#e8e8e8">dlss-combo install C:/Games/DemoGame</text>
+    <text x="60" y="160"><tspan fill="#7ee787">[ok]</tspan><tspan fill="#cfcfcf" dx="8">proxy: version.dll</tspan></text>
+    <text x="60" y="188"><tspan fill="#7ee787">[ok]</tspan><tspan fill="#cfcfcf" dx="8">ini: 4x, tier 1</tspan></text>
+    <text x="40" y="244" fill="#4ec94e">&gt;</text>
+    <rect x="60" y="230" width="10" height="18" fill="#4ec94e">
+      <animate attributeName="opacity" calcMode="discrete" values="1;0" keyTimes="0;0.5" dur="1.2s" repeatCount="indefinite"/>
+    </rect>
+  </g>
+
+  <!-- Panel 3: doctor (visible 6-9s) -->
+  <g font-family="monospace" font-size="16" opacity="0">
+    <animate attributeName="opacity" calcMode="discrete" dur="12s" repeatCount="indefinite" keyTimes="0;0.25;0.5;0.75" values="0;0;1;0"/>
+    <text x="40" y="80" fill="#7a7a7a" font-size="13">step 3/4 — doctor</text>
+    <text x="40" y="124" fill="#4ec94e">&gt;</text>
+    <text x="60" y="124" fill="#e8e8e8">dlss-combo doctor C:/Games/DemoGame</text>
+    <text x="60" y="160"><tspan fill="#7ee787">OK:</tspan><tspan fill="#cfcfcf" dx="8">frame-gen route active</tspan></text>
+    <text x="60" y="188"><tspan fill="#7ee787">OK:</tspan><tspan fill="#cfcfcf" dx="8">manifest verified</tspan></text>
+    <text x="40" y="244" fill="#4ec94e">&gt;</text>
+    <rect x="60" y="230" width="10" height="18" fill="#4ec94e">
+      <animate attributeName="opacity" calcMode="discrete" values="1;0" keyTimes="0;0.5" dur="1.2s" repeatCount="indefinite"/>
+    </rect>
+  </g>
+
+  <!-- Panel 4: report (visible 9-12s) -->
+  <g font-family="monospace" font-size="16" opacity="0">
+    <animate attributeName="opacity" calcMode="discrete" dur="12s" repeatCount="indefinite" keyTimes="0;0.25;0.5;0.75" values="0;0;0;1"/>
+    <text x="40" y="80" fill="#7a7a7a" font-size="13">step 4/4 — report</text>
+    <text x="40" y="124" fill="#4ec94e">&gt;</text>
+    <text x="60" y="124" fill="#e8e8e8">dlss-combo report C:/Games/DemoGame</text>
+    <text x="60" y="160" fill="#cfcfcf">## dlss-combo game-test report</text>
+    <text x="60" y="188" fill="#cfcfcf">paste-ready → game-test issue</text>
+    <text x="40" y="244" fill="#4ec94e">&gt;</text>
+    <rect x="60" y="230" width="10" height="18" fill="#4ec94e">
+      <animate attributeName="opacity" calcMode="discrete" values="1;0" keyTimes="0;0.5" dur="1.2s" repeatCount="indefinite"/>
+    </rect>
+  </g>
+
+  <!-- Footer -->
+  <text x="40" y="470" fill="#6f6f6f" font-family="monospace" font-size="13">4 steps · 3s each — illustrative output, not measured game results</text>
+  <text x="760" y="470" text-anchor="end" fill="#6f6f6f" font-family="monospace" font-size="13">RTX 20 / RTX 30</text>
+</svg>

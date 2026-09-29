@@ -5,6 +5,53 @@ All notable changes to this project are documented here. The format follows
 [SemVer](https://semver.org/) with a `0.x` experimental prefix. Evidence links
 point to files in this repository (`docs/`) so the trail is auditable offline.
 
+## [0.2.0] — 2026-09-29
+
+### Added
+
+- Daily upstream-structure watch: the scheduled `upstream-check` workflow
+  verifies the upstream shape this toolkit depends on (dlssg_for_sm86 main
+  commit resolves, kit files still exist at that commit, generated INI keys
+  stay accepted, DLSS5-Swapper still publishes a selectable portable asset)
+  and opens/updates an auto-labeled issue on drift, closing it when green
+  again. Evidence: `.github/workflows/upstream-check.yml`,
+  `scripts/upstream_check.py`, selftest `tests/test_upstream_check.py`.
+- `report` command: prints a paste-ready, offline, read-only game-test
+  report (GPU landscape with the selected card, manifest summary, routing
+  verdict, and an explicit "does NOT contain" section) for the game-test
+  issue template. Evidence: `src/dlss_combo/report.py`, `tests/test_report.py`.
+- `--check-update`: non-blocking check for a newer dlss-combo release before
+  any command — prints one line and continues; network failures degrade to a
+  skip notice. Evidence: `src/dlss_combo/update.py`, `tests/test_update.py`.
+- Multi-GPU enumeration: all NVIDIA cards are parsed and the **first card
+  with a supported architecture (RTX 20/30)** is selected; `doctor` lists
+  multi-card rigs and names the primary. `--arch` still overrides.
+  Evidence: `src/dlss_combo/gpu.py`, `tests/test_gpu_multi.py`.
+- Recommended test-games list for RTX 20/30 testers, with native-FG
+  evidence links and a verify-in-game disclaimer. Evidence:
+  `docs/TEST-GAMES.md`.
+
+### Changed
+
+- **CLI is now English-only** — help text, diagnostics and error messages.
+  Internal source comments are unchanged. Guarded by
+  `tests/test_english_cli.py` (CJK scan over user-facing strings).
+- Doctor session diagnostics hardened (see Fixed).
+
+### Fixed
+
+- Unreadable route logs are reported as problems instead of crashing
+  `doctor`; the session verdict is now the **last route event of the newest
+  log** (a later failure is never hidden by an earlier success), and
+  image-layer files count as evidence only, never as layer activation.
+  Evidence: `tests/test_doctor_last_event.py`.
+- Manifest schema/path validation errors are now English — they surface in
+  `doctor`/`install`/`uninstall` instead of aborting with a traceback, and a
+  bare invocation prints usage again (guarded in `tests/test_english_cli.py`).
+- Proxy fallback order regression-locked to the upstream tool-class order
+  (`version → winmm → dbghelp → dinput8` before `d3d12`/`dxgi`).
+  Evidence: `tests/test_proxy_order.py`.
+
 ## [0.1.3] — 2026-09-20
 
 ### Fixed
@@ -132,6 +179,7 @@ The nine reproduced problem behaviors are pinned by
 `docs/reviews/2026-09-20-repro.py` (all report fixed) and migrated into
 regression tests (`tests/test_review2.py`).
 
+[0.2.0]: https://github.com/ztwzeroo/DLSS5-FrameGen/releases/tag/v0.2.0
 [0.1.3]: https://github.com/ztwzeroo/DLSS5-FrameGen/releases/tag/v0.1.3
 [0.1.2]: https://github.com/ztwzeroo/DLSS5-FrameGen/releases/tag/v0.1.2
 [0.1.1]: https://github.com/ztwzeroo/DLSS5-FrameGen/releases/tag/v0.1.1

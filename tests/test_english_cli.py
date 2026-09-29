@@ -26,7 +26,7 @@ def test_help_and_doctor_output_english(tmp_path):
     d = tmp_path / ".dlss-combo"
     d.mkdir()
     (d / "manifest.json").write_text(
-        '{"version": 99, "created": "t", "dlss_combo_version": "0.1.3", '
+        '{"version": 99, "created": "t", "dlss_combo_version": "0.2.0", '
         '"dlssg": {}, "files": [], "backups": []}', encoding="utf-8")
     rep = doctor(tmp_path)
     assert any("unknown manifest schema version" in ln for ln in rep.lines)
