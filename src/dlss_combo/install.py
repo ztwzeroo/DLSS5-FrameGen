@@ -83,7 +83,8 @@ def install(
 
     # 1. preflight：显卡架构 + 驱动 + 能力组合
     if runtime == "310.1" and MFG_PRESET.get(mfg) == 5:
-        return _fail(["310.1 运行库最高支持 4X（上游 INI 明示），6X 仅 310.9 可用；请改用 --mfg 4x 或 --runtime 310.9"])
+        return _fail(["310.1 runtime supports at most 4X (stated in the upstream INI); "
+                      "6X needs 310.9 — use --mfg 4x or --runtime 310.9"])
     gpu = detect_gpu(override=arch)
     if gpu.arch is not None and gpu.arch not in SUPPORTED:
         return _fail(
@@ -92,11 +93,12 @@ def install(
         )
     warnings: list[str] = []
     if gpu.arch is None:
-        warnings.append("无法确认 GPU 架构（无 nvidia-smi？）——已继续，请自行确认是 RTX 20/30")
+        warnings.append("could not confirm GPU arch (no nvidia-smi?) — continued anyway; "
+                        "please verify you are on RTX 20/30")
     if driver_meets_minimum(gpu.driver_version) is False:
         warnings.append(
-            f"驱动 {gpu.driver_version} 低于 R580：DLSS-G 内核将走 PTX JIT 回退"
-            "（首帧慢）甚至不可用，建议升级 NVIDIA 驱动"
+            f"driver {gpu.driver_version} is below R580: the DLSS-G kernel will fall back "
+            "to PTX JIT (slow first frames) or not run at all; upgrade the NVIDIA driver"
         )
 
     # 2. kit 校验（缺文件/缺哈希/哈希不符 → 拒绝安装）
@@ -112,12 +114,13 @@ def install(
     except FileNotFoundError:
         pass
     except (json.JSONDecodeError, KeyError, TypeError) as e:
-        return _fail([f"manifest 损坏，拒绝安装（可手动删除 .dlss-combo 后重试）: {e}"])
+        return _fail([f"manifest corrupt; refusing to install (you may delete .dlss-combo "
+                      f"manually and retry): {e}"])
     if old_manifest is not None:
         try:
             old_manifest.validate(game_dir)
         except ValueError as e:
-            return _fail([f"manifest 校验失败，拒绝安装: {e}"])
+            return _fail([f"manifest validation failed; refusing to install: {e}"])
 
     externally_modified: set[str] = set()
     truly_ours: list[dict] = []
@@ -137,8 +140,9 @@ def install(
     choice = choose_proxy(occupied, allow_dxgi=allow_dxgi, force=proxy)
     if choice is None:
         return _fail(
-            ["代理名不可用（被第三方或外部修改文件占用）: " + ", ".join(sorted(occupied))
-             + "；请换 --proxy 或清理后重试（本工具绝不覆盖第三方 DLL）"]
+            ["no proxy name available (occupied by third-party or externally modified files): "
+             + ", ".join(sorted(occupied))
+             + " — pass --proxy or clean up and retry (this tool never overwrites third-party DLLs)"]
         )
 
     # 4. 备份与清理：只动"哈希仍一致的本工具文件"；外部修改的保留并警告
@@ -177,7 +181,8 @@ def install(
             p.unlink(missing_ok=True)
         for name in sorted(externally_modified):
             warnings.append(
-                f"文件已被外部修改、按第三方保留（如需本工具管理请先自行处理）: {name}"
+                f"file modified externally, kept as third-party (handle it yourself first "
+                f"if you want this tool to manage it): {name}"
             )
 
         # 首次安装：用户已有的 INI 先备份为 pre-existing（卸载时还原）
@@ -212,8 +217,9 @@ def install(
         )
         if ini_user_managed and ini_path.is_file():
             warnings.append(
-                "dlssg_sm86.ini 已被外部修改：保留你的版本，本次 tier/mfg 未写入"
-                "（删除该文件后重装可恢复本工具管理）"
+                "dlssg_sm86.ini was modified externally: keeping your version, tier/mfg "
+                "not written this time (delete the file and reinstall to let this tool "
+                "manage it again)"
             )
             new_manifest.dlssg["ini_user_managed"] = True
         else:
@@ -248,32 +254,36 @@ def install(
 
     # 6. 验证 + 画质层状态 + 指引
     actions = [
-        f"已安装代理: {choice.name} (来源 {choice.source}, runtime {runtime}, commit {new_manifest.dlssg['commit']})",
+        f"proxy installed: {choice.name} (source {choice.source}, runtime {runtime}, "
+        f"commit {new_manifest.dlssg['commit']})",
     ]
     if new_manifest.dlssg.get("ini_user_managed"):
-        actions.append("保留用户修改的 dlssg_sm86.ini（未写入本工具配置）")
+        actions.append("kept user-modified dlssg_sm86.ini (this tool's config not written)")
     else:
-        actions.append(f"已写入 {INI_NAME} (tier={tier}, mfg={mfg})")
+        actions.append(f"wrote {INI_NAME} (tier={tier}, mfg={mfg})")
     guidance = []
     if scan.reshade or scan.renodx or scan.feeder:
         guidance.append(
-            "已检测到 ReShade/Feeder/RenoDX 痕迹（DLSS 5 画质层的载体）——"
-            "痕迹不等于组件齐全，请进游戏确认画质层已生效"
+            "ReShade/Feeder/RenoDX traces detected (carriers of the DLSS 5 image layer) — "
+            "traces do not mean a complete install; confirm in game that the image layer is active"
         )
     else:
         guidance.append(
-            "未检测到 DLSS 5 画质层：先用 DLSS5-Swapper 给本游戏安装 DLSS 5 神经渲染，再回来享受组合效果"
+            "no DLSS 5 image layer detected: use DLSS5-Swapper to install DLSS 5 neural "
+            "rendering for this game first, then come back for the combined effect"
         )
     if scan.optiscaler:
-        warnings.append("检测到 OptiScaler：它与插帧层都钩 NGX 链路，如遇异常请只保留其一")
+        warnings.append("OptiScaler detected: it and the frame-gen layer both hook the NGX "
+                        "chain; if anything misbehaves keep only one")
     tamper = new_manifest.verify(game_dir)
     if tamper:
         warnings.extend(tamper)
 
     guidance.extend([
-        "进游戏设置开启 DLSS 帧生成（2X/3X/4X）；基础帧率 ≥55–60 再开 4X，6X 要求更高",
-        "验证生效: 日志 dlssg_sm86/logs/loader_*.jsonl 出现 runtime_redirect，或跑 doctor",
-        "重启游戏后生效；卸载用 dlss-combo uninstall",
+        "enable DLSS frame generation in the game's settings (2X/3X/4X); enable 4X only at "
+        "base fps 55-60 or higher, 6X needs even more",
+        "verify it works: dlssg_sm86/logs/loader_*.jsonl shows runtime_redirect, or run doctor",
+        "takes effect after a game restart; uninstall with dlss-combo uninstall",
     ])
     return InstallResult(
         ok=True,

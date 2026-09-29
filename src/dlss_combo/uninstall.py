@@ -23,7 +23,7 @@ def _exclusive_restore_copy(game_dir: Path, original: str, saved: Path) -> str:
         with os.fdopen(fd, "wb") as out, open(saved, "rb") as inp:
             shutil.copyfileobj(inp, out)
         return cand.name
-    raise RuntimeError(f"无法为 {original} 找到空闲的恢复副本名（前 100 个都被占用）")
+    raise RuntimeError(f"could not find a free restore-copy name for {original} (first 100 all taken)")
 
 
 def uninstall(game_dir: Path) -> list[str]:
@@ -47,11 +47,11 @@ def uninstall(game_dir: Path) -> list[str]:
             corrupted.append(b["saved_to"])
     if missing or corrupted:
         raise RuntimeError(
-            "pre-existing 备份"
-            + ("缺失: " + ", ".join(missing) if missing else "")
-            + (" 损坏: " + ", ".join(corrupted) if corrupted else "")
-            + " —— 为保可恢复，已中止卸载且未删除任何文件；"
-            f"请先从备份目录 {MANIFEST_DIR}/backups/ 找回或自行处理后再试"
+            "pre-existing backup"
+            + (" missing: " + ", ".join(missing) if missing else "")
+            + (" corrupted: " + ", ".join(corrupted) if corrupted else "")
+            + " — uninstall aborted and nothing was deleted so recovery stays possible; "
+            f"recover or handle it from {MANIFEST_DIR}/backups/ first, then retry"
         )
 
     deleted_by_us: set[str] = set()
@@ -60,7 +60,7 @@ def uninstall(game_dir: Path) -> list[str]:
         if not p.is_file():
             continue
         if m.sha256_of(p) != entry["sha256"]:
-            actions.append(f"保留（已被外部修改）: {entry['path']}")
+            actions.append(f"kept (modified externally): {entry['path']}")
             continue
         p.unlink()
         deleted_by_us.add(entry["path"])
@@ -73,7 +73,7 @@ def uninstall(game_dir: Path) -> list[str]:
             # 目标是外部修改后的用户文件：不覆盖，原配置排他另存副本
             side = _exclusive_restore_copy(game_dir, b["original"], saved)
             actions.append(
-                f"保留用户修改的 {b['original']}；安装前原配置另存为 {side}"
+                f"kept user-modified {b['original']}; pre-install original saved as {side}"
             )
         else:
             shutil.copy2(saved, target)

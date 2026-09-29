@@ -48,3 +48,19 @@ def test_uninstall_without_manifest_cli_fails(tmp_path: Path):
 def test_invalid_mfg_rejected(game: Path, kit: Path):
     rc = main(["install", str(game), "--kit-dir", str(kit), "--arch", "sm86", "--mfg", "9x"])
     assert rc != 0
+
+
+def test_bare_invocation_still_returns_2(capsys):
+    assert main([]) == 2
+    assert "usage:" in capsys.readouterr().err
+
+
+def test_check_update_only_returns_0_and_never_blocks(monkeypatch, capsys):
+    import dlss_combo.update as update_mod
+
+    monkeypatch.setattr(
+        update_mod, "check_update",
+        lambda cur, fetch_bytes=None: update_mod.UpdateInfo("unknown"),
+    )
+    assert main(["--check-update"]) == 0
+    assert "update check skipped" in capsys.readouterr().out

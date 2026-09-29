@@ -3,6 +3,9 @@
 顺序依据上游 alternatives/README.md：根目录四个工具类代理优先
 （version/winmm/dbghelp/dinput8），d3d12/dxgi 是渲染路径回退、风险更高，
 排在最后且 dxgi 需显式放行。
+
+上游核对（2026-09-29）：上述顺序与 main 分支 alternatives/README.md 及
+README.md 的指引仍然一致（工具代理优先，d3d12/dxgi 仅作回退、风险更高）。
 """
 from dataclasses import dataclass
 

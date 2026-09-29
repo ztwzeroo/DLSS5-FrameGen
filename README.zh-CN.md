@@ -14,6 +14,7 @@
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue)](https://www.python.org/downloads/)
 [![Target: Windows](https://img.shields.io/badge/target-Windows-0078D6)](#requirements--运行条件)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+[![upstream-check](https://github.com/ztwzeroo/DLSS5-FrameGen/actions/workflows/upstream-check.yml/badge.svg)](https://github.com/ztwzeroo/DLSS5-FrameGen/actions/workflows/upstream-check.yml)
 
 **下载 / Download**: [Releases](https://github.com/ztwzeroo/DLSS5-FrameGen/releases) 提供
 Windows EXE 与 Linux x64 二进制（GitHub Actions 从打 tag 的提交构建，未签名），
@@ -73,11 +74,14 @@ Target environment: **Windows 10/11 x64, RTX 20 or RTX 30**, and a D3D12 game wi
 **Single-player testing only. Do not use with anti-cheat or competitive multiplayer games.**
 **仅限单机测试，不要用于带反作弊的游戏或竞技多人游戏。**
 
+**Multiple NVIDIA GPUs / 多张 NVIDIA 显卡：** with several cards present, the tool picks the **first card with a supported architecture** (RTX 20/30) and `doctor` lists every card so you can confirm the selection; `install DIR --arch sm75|sm86` overrides the choice. 不知选哪款游戏？See [Recommended test games / 推荐测试游戏](docs/TEST-GAMES.md)（英文 / English）.
+多卡环境下，工具自动选择**第一张受支持架构**（RTX 20/30）的显卡，`doctor` 会列出全部显卡供确认；可用 `install DIR --arch` 覆盖。
+
 ## Getting started / 开始使用
 
-The commands below are for experimental testing. Read the known issues and keep an independent backup before writing to any game directory.
+The commands below are for experimental testing. Read the known issues and keep an independent backup before writing to any game directory. Not sure which game to start with? See [Recommended test games / 推荐测试游戏](docs/TEST-GAMES.md)（英文 / English）.
 
-以下命令供实验测试使用。向游戏目录写入前，请先阅读已知问题并保留独立备份。
+以下命令供实验测试使用。向游戏目录写入前，请先阅读已知问题并保留独立备份。不知从哪款游戏开始？参考[推荐测试游戏列表](docs/TEST-GAMES.md)（英文）。
 
 ```powershell
 git clone https://github.com/ztwzeroo/DLSS5-FrameGen.git
@@ -96,7 +100,15 @@ dlss-combo install "C:/Games/TestCopy/Binaries/Win64" --mfg 4x
 
 # After playing, inspect logs / 运行游戏后读取诊断
 dlss-combo doctor "C:/Games/TestCopy/Binaries/Win64"
+
+# Generate a paste-ready game-test report / 生成可直接粘贴的测试报告
+dlss-combo report "C:/Games/TestCopy/Binaries/Win64"
 ```
+
+<p align="center"><img src="assets/demo.svg" alt="dlss-combo workflow demo" width="640"></p>
+
+*Animated walkthrough: `fetch` → `install` → `doctor` → `report` — illustrative output, not measured results.*
+*动画演示：下载 → 安装 → 诊断 → 报告（示意输出，非实测结果）。*
 
 The command remains **`dlss-combo`**; the public project name is **DLSS5-FrameGen**. Use `py -m dlss_combo` after installation if the command is not on your PATH.
 
@@ -106,14 +118,18 @@ The command remains **`dlss-combo`**; the public project name is **DLSS5-FrameGe
 |---|---|
 | `fetch [--runtime 310.9\|310.1] [--kit-dir DIR] [--refresh]` | Download components; default cache is `~/dlss-combo-kit` / 下载组件 |
 | `install DIR [--mfg 2x\|3x\|4x\|6x] [--tier 0-3] [--runtime 310.9\|310.1] [--kit-dir DIR]` | Install the frame-generation layer / 安装插帧层 |
-| `install DIR --arch sm75\|sm86` | Override GPU detection; currently also bypasses driver detection / 覆盖 GPU 探测，当前也会跳过驱动探测 |
+| `install DIR --arch sm75\|sm86` | Override GPU-architecture detection; driver version checks still run / 覆盖 GPU 架构探测；驱动版本检查仍会执行 |
 | `install DIR --launch-swapper` | Open the cached Swapper asset; launch validation improvements are pending / 打开缓存的 Swapper，启动校验待完善 |
 | `doctor DIR` | Inspect files and available logs / 读取文件与日志状态 |
+| `report DIR [--out FILE]` | Print a paste-ready offline game-test report / 生成可直接粘贴的游戏测试报告（离线、只读） |
+| `--check-update`（加在任意命令前 / prepend to any command） | Non-blocking newer-release check, skipped silently when offline / 非阻塞检查新版本，离线自动跳过 |
 | `uninstall DIR` | Remove managed files; restoration limitations remain / 卸载本工具文件，还原能力存在已知限制 |
 
 ReShade, RenoDX or Feeder file markers alone do not prove DLSS 5 is active. Coexistence with other mods depends on the game and installation route. Measure the base frame rate before raising the frame-generation multiplier.
 
 检测到 ReShade、RenoDX 或 Feeder 文件不代表 DLSS 5 已生效。与其他 mod 是否兼容取决于具体游戏和安装路线；提高插帧倍数前，请先测不插帧时的基础帧率。
+
+`--check-update` 可加在任意命令前（如 `dlss-combo --check-update doctor DIR`），非阻塞检查是否有新版本，只打印一行、离线自动跳过。/ Prepend `--check-update` to any command for a non-blocking newer-release check — it prints one line and is skipped silently when offline.
 
 ## Roadmap / 改善路线
 

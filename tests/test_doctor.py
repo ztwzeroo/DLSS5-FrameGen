@@ -50,7 +50,7 @@ def test_doctor_healthy_install(tmp_path: Path, game: Path, kit: Path):
     (logdir / "backend_9.jsonl").write_text('{"event":"install","route":{"active":true}}\n')
     rep = doctor(game)
     assert rep.route_active is True
-    assert not any("missing" in l or "未检测到" in l for l in rep.lines)
+    assert not any("missing" in l or "not detected" in l for l in rep.lines)
 
 
 def test_doctor_missing_dlss5_layer_hint(tmp_path: Path):

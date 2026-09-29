@@ -28,7 +28,7 @@ def test_reinstall_preserves_user_modified_ini(tmp_path: Path):
     assert r.ok
     content = (g / "dlssg_sm86.ini").read_text(encoding="utf-8")
     assert content == "; my tuned config after install\nPreset=B\n"
-    assert any("dlssg_sm86.ini" in w and "保留" in w for w in r.warnings)
+    assert any("dlssg_sm86.ini" in w and "keeping your version" in w for w in r.warnings)
     # 代理本体照常升级
     assert (g / "version.dll").read_bytes() == b"V9-new"
 

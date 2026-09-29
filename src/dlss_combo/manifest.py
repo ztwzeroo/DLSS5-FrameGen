@@ -29,19 +29,19 @@ _SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 def safe_target(game_dir: Path, rel: str) -> Path:
     """把清单里的相对路径安全拼进游戏目录；越界/绝对路径/链接逃逸一律 ValueError。"""
     if not isinstance(rel, str) or not rel or rel.strip() == "":
-        raise ValueError(f"manifest 非法路径: {rel!r}")
+        raise ValueError(f"manifest invalid path: {rel!r}")
     p = Path(rel)
     if p.is_absolute():
-        raise ValueError(f"manifest 拒绝绝对路径: {rel}")
+        raise ValueError(f"manifest rejects absolute paths: {rel}")
     if ".." in p.parts:
-        raise ValueError(f"manifest 拒绝父目录跳转: {rel}")
+        raise ValueError(f"manifest rejects parent-directory traversal: {rel}")
     target = game_dir / p
     if target.is_symlink():
-        raise ValueError(f"manifest 拒绝符号链接: {rel}")
+        raise ValueError(f"manifest rejects symbolic links: {rel}")
     resolved_root = game_dir.resolve()
     resolved = target.resolve()
     if resolved != resolved_root and resolved_root not in resolved.parents:
-        raise ValueError(f"manifest 路径越界: {rel}")
+        raise ValueError(f"manifest path escapes the game directory: {rel}")
     return target
 
 
@@ -126,23 +126,23 @@ class Manifest:
     def validate(self, game_dir: Path) -> None:
         """卸载/重装前必过：任何一项不合法即抛 ValueError，不做任何修改。"""
         if self.version != VERSION:
-            raise ValueError(f"未知 manifest schema 版本 (version={self.version})，拒绝执行")
+            raise ValueError(f"unknown manifest schema version (version={self.version}); refusing to proceed")
         for entry in self.files:
             path = entry.get("path")
             if path not in ALLOWED_FILENAMES:
-                raise ValueError(f"manifest 管理了允许范围外的路径: {path!r}")
+                raise ValueError(f"manifest manages a path outside the allowed set: {path!r}")
             if not _SHA256_RE.match(str(entry.get("sha256", ""))):
-                raise ValueError(f"manifest 哈希格式非法: {path!r}")
+                raise ValueError(f"manifest hash has an invalid format: {path!r}")
             safe_target(game_dir, path)
         for b in self.backups:
             if b.get("original") not in ALLOWED_FILENAMES:
-                raise ValueError(f"备份目标在允许范围外: {b.get('original')!r}")
+                raise ValueError(f"backup target outside the allowed set: {b.get('original')!r}")
             saved_to = str(b.get("saved_to", ""))
             saved_path = Path(saved_to)
             if saved_path.is_absolute() or ".." in saved_path.parts:
-                raise ValueError(f"备份位置越界: {saved_to!r}")
+                raise ValueError(f"backup location escapes the allowed directory: {saved_to!r}")
             if MANIFEST_DIR not in saved_path.parts:
-                raise ValueError(f"备份必须位于 {MANIFEST_DIR}/ 内: {saved_to!r}")
+                raise ValueError(f"backup must be inside {MANIFEST_DIR}/: {saved_to!r}")
             safe_target(game_dir, saved_to)
 
     def verify(self, game_dir: Path) -> list[str]:

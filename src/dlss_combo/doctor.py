@@ -7,8 +7,9 @@ import json
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from .gpu import choose_gpu, detect_all_gpus
 from .manifest import Manifest
-from .scan import scan_game_dir
+from .scan import GameScan, scan_game_dir
 
 
 @dataclass
@@ -16,6 +17,9 @@ class DoctorReport:
     lines: list[str] = field(default_factory=list)
     route_active: bool | None = None
     problems: list[str] = field(default_factory=list)
+    # Image-layer marker files seen in the game dir (e.g. "ReShade") — evidence
+    # only, never proof of an active layer; consumed by downstream reporting.
+    image_layer_files: list[str] = field(default_factory=list)
 
     @property
     def has_problems(self) -> bool:
@@ -43,10 +47,28 @@ def _parse_route_active(text: str) -> bool | None:
     return result
 
 
+def _image_layer_names(game_dir: Path, scan: GameScan) -> list[str]:
+    """Image-layer file evidence (weaker than scan's "component complete" verdict):
+    scan flags plus direct marker files — a bare ReShade.ini still proves the file
+    is present, which is all the evidence tier claims."""
+    try:
+        names = {e.name.lower() for e in game_dir.iterdir()}
+    except OSError:
+        names = set()
+    layers: list[str] = []
+    if scan.reshade or "reshade.ini" in names:
+        layers.append("ReShade")
+    if scan.renodx:
+        layers.append("RenoDX")
+    if scan.feeder:
+        layers.append("Feeder")
+    return layers
+
+
 def doctor(game_dir: Path) -> DoctorReport:
     """对游戏目录做只读体检，输出人读的诊断行。"""
     if not game_dir.is_dir():
-        rep = DoctorReport(lines=[f"目录不存在: {game_dir}"])
+        rep = DoctorReport(lines=[f"directory not found: {game_dir}"])
         rep.problems.append("game dir missing")
         return rep
 
@@ -57,7 +79,7 @@ def doctor(game_dir: Path) -> DoctorReport:
         ours = set()
         manifest = None
     except (json.JSONDecodeError, KeyError, TypeError):
-        rep = DoctorReport(lines=["manifest 损坏，无法诊断"])
+        rep = DoctorReport(lines=["manifest corrupt; cannot diagnose"])
         rep.problems.append("manifest corrupt")
         return rep
 
@@ -71,7 +93,13 @@ def doctor(game_dir: Path) -> DoctorReport:
     if log_dir.is_dir():
         logs = sorted(log_dir.glob("backend_*.jsonl"), key=lambda p: p.stat().st_mtime, reverse=True)
         for idx, log in enumerate(logs):
-            result = _parse_route_active(log.read_text(encoding="utf-8", errors="replace"))
+            # An unreadable log degrades the diagnosis to a problem; never crash (W5).
+            try:
+                text = log.read_text(encoding="utf-8", errors="replace")
+            except OSError:
+                rep.problems.append(f"log unreadable: {log.name}")
+                continue
+            result = _parse_route_active(text)
             if idx == 0:
                 if result is not None:
                     rep.route_active = result
@@ -79,59 +107,80 @@ def doctor(game_dir: Path) -> DoctorReport:
             elif result is not None:
                 historical.append((log.name, result))
     if rep.route_active is True:
-        rep.lines.append(f"OK: dlssg 插帧路由已生效（最新日志 {source_log.name if source_log else ''} route active=true）")
+        rep.lines.append(f"OK: dlssg frame-gen routing is active (latest log "
+                         f"{source_log.name if source_log else ''} route active=true)")
     elif rep.route_active is False:
         rep.lines.append(
-            "问题: 最新 backend 日志显示 route active=false——驱动/运行库未匹配，"
-            "把 ini 的 [Logging] Level 提到 2 后重开游戏复现"
+            "problem: latest backend log shows route active=false — driver/runtime "
+            "mismatch; raise [Logging] Level to 2 in the ini and restart the game to reproduce"
         )
         rep.problems.append("route active=false")
     else:
         rep.lines.append(
-            "未验证：最新日志没有 route 事件（本次会话未确认生效）；"
-            "日志在 dlssg_sm86/logs/，先跑一局游戏再查"
+            "unverified: the latest log has no route event (not confirmed this session); "
+            "logs live in dlssg_sm86/logs/ — play a round first, then check again"
         )
     for name, active in historical:
         rep.lines.append(
-            f"历史参考: 更早的 {name} 曾报告 route active={'true' if active else 'false'}"
-            "（不代表本次会话）"
+            f"historical: older {name} reported route active={'true' if active else 'false'} "
+            "(not this session)"
+        )
+
+    # 0. GPU landscape（多 NVIDIA 卡时列出全部，明确主卡与 --arch 覆盖）
+    gpus = detect_all_gpus()
+    nvidia = [g for g in gpus if g.vendor == "nvidia"]
+    if len(nvidia) > 1:
+        primary = choose_gpu(gpus)
+        names = ", ".join(g.name for g in nvidia)
+        rep.lines.append(
+            f"note: multiple NVIDIA GPUs detected ({names}); using {primary.name or primary.arch} "
+            "— pass --arch to override"
         )
 
     # 2. 代理冲突
     proxies = sorted(scan.existing_proxies)
     if len(proxies) > 1:
         rep.lines.append(
-            f"注意: 多个代理 DLL 并存 {proxies}——按上游说明首个被游戏加载者生效、"
-            "其余仅转发；ReShade/画质层的 dxgi.dll 与插帧代理并存属预期，异常时再精简"
+            f"note: multiple proxy DLLs coexist {proxies} — per upstream, the first one "
+            "the game loads wins and the rest only forward; ReShade/image-layer dxgi.dll "
+            "next to the frame-gen proxy is expected, trim only if things misbehave"
         )
     foreign = [n for n, k in scan.existing_proxies.items() if k == "foreign"]
     if manifest is None and foreign:
-        rep.lines.append(f"注意: {foreign} 非本工具安装（无 manifest）——如有异常先排查这些 DLL")
+        rep.lines.append(f"note: {foreign} not installed by this tool (no manifest) — "
+                         "check these DLLs first if anything misbehaves")
 
-    # 3. 画质层（痕迹 ≠ 组件齐全/已生效，如实表述）
-    if scan.reshade or scan.renodx or scan.feeder:
-        rep.lines.append("已检测到 ReShade/Feeder/RenoDX 痕迹（DLSS 5 画质层载体）；痕迹不代表画质层已在游戏内生效，请进游戏确认")
+    # 3. Image layer (files present are evidence, never proof of activation)
+    rep.image_layer_files = _image_layer_names(game_dir, scan)
+    if rep.image_layer_files:
+        rep.lines.append(
+            "note: image-layer files present (not proof of an active layer): "
+            + ", ".join(rep.image_layer_files)
+        )
     else:
-        rep.lines.append("提示: 可用 DLSS5-Swapper 加装 DLSS 5 画质层，与插帧层组合获得更好画面")
+        rep.lines.append("hint: add the DLSS 5 image layer with DLSS5-Swapper and combine it "
+                         "with the frame-gen layer for a better picture")
 
     if scan.optiscaler:
-        rep.lines.append("注意: 检测到 OptiScaler——与插帧层重复钩 NGX，异常时二选一")
+        rep.lines.append("note: OptiScaler detected — it duplicates the frame-gen layer's "
+                         "NGX hooks; keep only one if things misbehave")
 
     # 4. manifest 完整性
     if manifest is not None:
         try:
             manifest.validate(game_dir)
         except ValueError as e:
-            rep.lines.append(f"问题: manifest 校验失败: {e}")
+            rep.lines.append(f"problem: manifest validation failed: {e}")
             rep.problems.append("manifest invalid")
         else:
             problems = manifest.verify(game_dir)
             if problems:
-                rep.lines.extend(f"问题: {p}" for p in problems)
+                rep.lines.extend(f"problem: {p}" for p in problems)
                 rep.problems.extend(problems)
             else:
-                rep.lines.append("OK: manifest 校验通过，文件未被篡改")
+                rep.lines.append("OK: manifest validated, files untampered")
     else:
-        rep.lines.append("提示: 无 dlss-combo manifest——插帧层可能不是本工具装的")
+        rep.lines.append("hint: no dlss-combo manifest — the frame-gen layer may not have "
+                         "been installed by this tool")
 
     return rep

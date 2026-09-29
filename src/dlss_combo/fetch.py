@@ -163,6 +163,15 @@ class SwapperInfo:
     zip_path: Path
 
 
+def select_portable_asset(assets: dict[str, str]) -> str | None:
+    """latest release 资产名 → portable 包名；Setup 安装器不算。"""
+    return next(
+        (n for n in assets
+         if "portable" in n.lower() and n.lower().endswith((".zip", ".exe"))),
+        None,
+    )
+
+
 def fetch_swapper(
     kit_dir: Path,
     refresh: bool = False,
@@ -182,11 +191,7 @@ def fetch_swapper(
     release = json.loads(fetch_bytes(SWAPPER_API).decode("utf-8"))
     assets = {a["name"]: a["browser_download_url"] for a in release.get("assets", [])}
     # 上游实际发布 *.portable.exe（也有过 .zip 的可能）；Setup 安装器不是我们要的
-    portable_name = next(
-        (n for n in assets
-         if "portable" in n.lower() and n.lower().endswith((".zip", ".exe"))),
-        None,
-    )
+    portable_name = select_portable_asset(assets)
     if portable_name is None:
         raise RuntimeError(f"no portable asset in {SWAPPER_REPO} latest release")
 
@@ -248,20 +253,21 @@ def launch_swapper(
     entry = meta.get("swapper", {})
     rel = entry.get("zip")
     if not rel:
-        raise FileNotFoundError("kit 中没有 DLSS5-Swapper（先运行 dlss-combo fetch）")
+        raise FileNotFoundError("no DLSS5-Swapper in the kit (run dlss-combo fetch first)")
     rel_path = Path(str(rel))
     if rel_path.is_absolute() or ".." in rel_path.parts:
-        raise ValueError(f"Swapper 路径越界: {rel!r}")
+        raise ValueError(f"Swapper path escapes the kit directory: {rel!r}")
     exe = kit_dir / rel_path
     if not exe.is_file():
-        raise FileNotFoundError(f"DLSS5-Swapper 不在 kit 中: {exe}")
+        raise FileNotFoundError(f"DLSS5-Swapper not found in the kit: {exe}")
     if exe.suffix.lower() == ".zip":
         raise RuntimeError(
-            "kit 中的 Swapper 是 zip 包：请解压后运行其中的 exe，或重新 fetch 获取 portable.exe"
+            "the Swapper in the kit is a zip archive: extract it and run the exe inside, "
+            "or re-run fetch to get the portable.exe"
         )
     recorded = str(entry.get("sha256", ""))
     if not _SHA256_RE.match(recorded) or Manifest.sha256_of(exe) != recorded:
-        raise RuntimeError(f"hash mismatch: DLSS5-Swapper 哈希不符，拒绝启动: {exe.name}")
+        raise RuntimeError(f"hash mismatch: DLSS5-Swapper checksum mismatch, refusing to launch: {exe.name}")
     (spawn or _default_spawn)(exe)
     return exe
 

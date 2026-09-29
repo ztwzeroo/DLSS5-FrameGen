@@ -71,6 +71,8 @@ jobs:
           "$BIN" install "$SGAME" --kit-dir "$SMK" --arch sm86 --mfg 4x
           test -f "$SGAME/dlssg_sm86.ini" && test -f "$SGAME/version.dll"
           "$BIN" doctor "$SGAME"
+          "$BIN" report "$SGAME"
+          "$BIN" --check-update
           "$BIN" uninstall "$SGAME"
           test ! -e "$SGAME/version.dll" && test ! -e "$SGAME/dlssg_sm86.ini"
           test -f "$SGAME/game.exe"

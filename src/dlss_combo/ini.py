@@ -49,3 +49,28 @@ def build_ini(tier: int = 1, mfg: str = "4x", logging_level: int = 1) -> str:
         max_generated_frames=MFG_PRESET[mfg],
         logging_level=logging_level,
     )
+
+
+# 上游 ini 键位契约：我们的模板镜像这些键；上游漂移时 upstream_check 会报警
+INI_REQUIRED_KEYS: dict[str, tuple[str, ...]] = {
+    "General": ("Enabled",),
+    "FrameGeneration": ("Optimized", "MaxGeneratedFrames"),
+    "Runtime": ("Mode",),
+}
+
+
+def missing_ini_keys(text: str) -> list[str]:
+    """text 里缺失的必需 section.key 列表；整体解析失败返回 ["<unparseable ini>"]。"""
+    import configparser
+
+    cp = configparser.ConfigParser()
+    try:
+        cp.read_string(text)
+    except configparser.Error:
+        return ["<unparseable ini>"]
+    missing: list[str] = []
+    for sec, keys in INI_REQUIRED_KEYS.items():
+        for key in keys:
+            if not cp.has_option(sec, key):
+                missing.append(f"{sec}.{key}")
+    return missing
